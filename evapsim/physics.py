@@ -67,9 +67,6 @@ def intersection_gpu(Px, Py, Vi, raycast_sin_angle, raycast_cos_angle):
                     pass
 
 
-log.info("Method: intersection_gpu has loaded.")
-
-
 @cuda.jit('void(float64[:], float64[:], float64[:,:], float64[:,:], float64)')
 def grid_gpu(Px, Py, Vx, Vy, model_resolution):
     '''
@@ -147,9 +144,6 @@ def grid_gpu(Px, Py, Vx, Vy, model_resolution):
                     else:  # Slope in Q4
                         Vx[i, j] = round(Px[i] + (x * j), dec_acc)
                         Vy[i, j] = round(Py[i] - (y * j), dec_acc)
-
-
-log.info("Method: grid_gpu has loaded.")
 
 
 @cuda.jit('void(float64[:], float64[:], int8[:], float64, float64, float64, float64, float64[:,:], float64[:,:], float64[:,:])')  # noqa
@@ -365,9 +359,6 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
                 Vx[i, 1] = Px[i]
                 Vy[i, 1] = Py[i]
                 Vi[i, 1] = 1
-
-
-log.info("Method: model_gpu has loaded.")
 
 
 @cuda.jit('void(float64[:], float64[:], float64[:], float64[:], float64)')
