@@ -3,6 +3,9 @@ import math
 import time
 import sys
 
+from numba import cuda
+
+from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QFileDialog
 
 import matplotlib.pyplot as plt
@@ -13,8 +16,15 @@ import pandas as pd
 from pathlib import Path
 from itertools import cycle
 
+from evapsim.physics import (grid_gpu, intersection_gpu,
+                             merge_gpu, model_gpu)
+from evapsim import application
+
 import logging
 log = logging.getLogger("evapsim")
+
+assert cuda.detect()
+device = cuda.get_current_device()
 
 
 class Simulator(object):
@@ -81,7 +91,7 @@ class Simulator(object):
     '''
     loop_counter = 0
 
-    def __init__(self, device):
+    def __init__(self):
         '''
         Build initial parameters of the evaporation simulator
         '''
@@ -108,6 +118,15 @@ class Simulator(object):
 
         self.graph_ani.tight_layout()
         log.info("Simulator init complete.")
+
+        self.window = QtWidgets.QApplication(sys.argv)
+        self.app = application.Application_Qt(self)
+        log.info("Application Window running:")
+        self.app.MainWindow.show()
+
+        self.simulation_parameters()
+        log.info("Simulator running:")
+        sys.exit(self.window.exec_())
 
     def run(self):
         '''
@@ -221,7 +240,8 @@ class Simulator(object):
 
             # Update progress to user
             # app.progress.set(100 * i // self.total_fps)
-            app.progressBar.setProperty("value", 100 * i // self.total_fps)
+            self.app.progressBar.setProperty(
+                "value", 100 * i // self.total_fps)
 
             # Remaining calculations
             timer_end = time.process_time()
@@ -254,19 +274,19 @@ class Simulator(object):
                                                   blit=False,
                                                   repeat=False)
 
-        app.graphcanvas.draw_idle()
+        self.app.graphcanvas.draw_idle()
 
     def simulation_parameters(self):
         '''
         Starting parameters of the evaporation - pulls values from the GUI
         '''
-        self.model_resolution = float(app.lineEdit_model_resolution.text())
-        self.evaporation_rate = (float(app.lineEdit_evap_rate.text())
+        self.model_resolution = float(self.app.lineEdit_model_resolution.text())
+        self.evaporation_rate = (float(self.app.lineEdit_evap_rate.text())
                                  * self.tickrate)
 
-        self.evaporation_time = float(app.lineEdit_evap_time.text())
-        self.gridspace = float(app.lineEdit_grid_space.text())
-        self.raycast_length = float(app.lineEdit_raycast_length.text())
+        self.evaporation_time = float(self.app.lineEdit_evap_time.text())
+        self.gridspace = float(self.app.lineEdit_grid_space.text())
+        self.raycast_length = float(self.app.lineEdit_raycast_length.text())
         log.info("Parameters loaded from GUI")
 
     def load_csv_model(self):
@@ -307,7 +327,7 @@ class Simulator(object):
             self.ax_ani.set_ylim(min(self.model_ini[1]) - ypad,
                                  max(self.model_ini[1]) + ypad)
 
-            app.graphcanvas.draw_idle()
+            self.app.graphcanvas.draw_idle()
             log.info("Model file loaded: %s" % filepath)
 
     def load_csv_angletime(self):
@@ -344,13 +364,13 @@ class Simulator(object):
 
             xpad = (max(self.avst_ini[0]) - min(self.avst_ini[0])) * 0.05
             ypad = (max(self.avst_ini[1]) - min(self.avst_ini[1])) * 0.05
+            # self.avst was sim.avst
+            self.ax_ani.set_xlim(min(self.avst_ini[0]) - xpad,
+                                 max(self.avst_ini[0]) + xpad)
+            self.ax_ani.set_ylim(min(self.avst_ini[1]) - ypad,
+                                 max(self.avst_ini[1]) + ypad)
 
-            self.ax_ani.set_xlim(min(sim.avst_ini[0]) - xpad,
-                                 max(sim.avst_ini[0]) + xpad)
-            self.ax_ani.set_ylim(min(sim.avst_ini[1]) - ypad,
-                                 max(sim.avst_ini[1]) + ypad)
-
-            app.graphcanvas.draw_idle()
+            self.app.graphcanvas.draw_idle()
             log.info("AvsT file loaded: %s" % filepath)
 
     def save_csv_model(self):
@@ -412,13 +432,13 @@ class Simulator(object):
         output_y = np.full(shape=(xdim, ydim),
                            fill_value=math.nan, dtype=np.float64)
 
-        bpg_x = (output_x.shape[0] + tpb_2d[0]) // tpb_2d[0]
-        bpg_y = (output_x.shape[1] + tpb_2d[1]) // tpb_2d[1]
+        bpg_x = (output_x.shape[0] + self.tpb_2d[0]) // self.tpb_2d[0]
+        bpg_y = (output_x.shape[1] + self.tpb_2d[1]) // self.tpb_2d[1]
         bpg_2d = (bpg_x, bpg_y)
 
-        grid_gpu[bpg_2d, tpb_2d](input_x, input_y,
-                                 output_x, output_y,
-                                 self.model_resolution)
+        grid_gpu[bpg_2d, self.tpb_2d](input_x, input_y,
+                                      output_x, output_y,
+                                      self.model_resolution)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
@@ -440,8 +460,8 @@ class Simulator(object):
         '''
         output_i = np.full(len(input_x), 0, dtype=np.int8)
 
-        bpg_x = (len(input_x) + tpb_2d[0]) // tpb_2d[0]
-        bpg_y = (len(input_y) + tpb_2d[1]) // tpb_2d[1]
+        bpg_x = (len(input_x) + self.tpb_2d[0]) // self.tpb_2d[0]
+        bpg_y = (len(input_y) + self.tpb_2d[1]) // self.tpb_2d[1]
         bpg_2d = (bpg_x, bpg_y)
 
         raycast_sin = round(
@@ -449,9 +469,9 @@ class Simulator(object):
         raycast_cos = round(
             self.raycast_length * math.cos(angle), 10)
 
-        intersection_gpu[bpg_2d, tpb_2d](input_x, input_y,
-                                         output_i,
-                                         raycast_sin, raycast_cos)
+        intersection_gpu[bpg_2d, self.tpb_2d](input_x, input_y,
+                                              output_i,
+                                              raycast_sin, raycast_cos)
         return output_i
 
     def model_update_gpu(self, input_x, input_y, input_i, angle):
@@ -482,11 +502,11 @@ class Simulator(object):
         Rx = round(self.raycast_length * math.sin(angle), 10)
         Ry = round(self.raycast_length * math.cos(angle), 10)
 
-        bpg = int(np.ceil(xdim / tpb))
+        bpg = int(np.ceil(xdim / self.tpb))
 
-        model_gpu[bpg, tpb](input_x, input_y, input_i,
-                            angle, Rx, Ry, rate,
-                            output_x, output_y, output_i)
+        model_gpu[bpg, self.tpb](input_x, input_y, input_i,
+                                 angle, Rx, Ry, rate,
+                                 output_x, output_y, output_i)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
@@ -507,11 +527,11 @@ class Simulator(object):
         output_x = np.full(xdim, fill_value=math.nan, dtype=np.float64)
         output_y = np.full(xdim, fill_value=math.nan, dtype=np.float64)
 
-        bpg = int(np.ceil(xdim / tpb))
+        bpg = int(np.ceil(xdim / self.tpb))
 
-        merge_gpu[bpg, tpb](input_x, input_y,
-                            output_x, output_y,
-                            self.gridspace)
+        merge_gpu[bpg, self.tpb](input_x, input_y,
+                                 output_x, output_y,
+                                 self.gridspace)
 
         output_x = output_x[~np.isnan(output_x)]
         output_y = output_y[~np.isnan(output_y)]

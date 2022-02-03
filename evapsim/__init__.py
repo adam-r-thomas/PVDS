@@ -1,7 +1,5 @@
 
-import sys
-from PyQt5 import QtCore, QtGui, QtWidgets
-
+from evapsim import simulator
 import logging
 
 
@@ -18,13 +16,4 @@ stream.setLevel(logging.DEBUG)
 log.addHandler(stream)
 
 log.info("Program Start")
-sim = Simulator()
-log.info("Simulator running:")
-
-window = QtWidgets.QApplication(sys.argv)
-app = Application_Qt(sim)
-log.info("Application Window running:")
-app.MainWindow.show()
-
-sim.simulation_parameters()
-sys.exit(window.exec_())
+sim = simulator.Simulator()

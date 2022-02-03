@@ -5,8 +5,6 @@ from numba import cuda
 import logging
 log = logging.getLogger("evapsim")
 
-assert cuda.detect()
-
 
 @cuda.jit('void(float64[:], float64[:], int8[:], float64, float64)')
 def intersection_gpu(Px, Py, Vi, raycast_sin_angle, raycast_cos_angle):

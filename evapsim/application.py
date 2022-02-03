@@ -19,7 +19,7 @@ class Application_Qt(object):
         self.setupUi(self.MainWindow)
         self.connectUi()
 
-        self.graphcanvas = FigureCanvasQTAgg(sim.graph_ani)
+        self.graphcanvas = FigureCanvasQTAgg(self.sim.graph_ani)
         self.layoutPlot = QtWidgets.QWidget(self.graphicsView)
 
         self.gridPlot = QtWidgets.QGridLayout(self.layoutPlot)
@@ -299,4 +299,4 @@ class Application_Qt(object):
 
     def _quit(self):
         log.info("Program End")
-        sys.exit(window.exit())
+        sys.exit(QtWidgets.QApplication(sys.argv).exit())
