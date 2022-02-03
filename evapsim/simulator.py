@@ -347,10 +347,12 @@ class Simulator(object):
             assert '.csv' in filepath.suffix
             df = pd.read_csv(filepath, dtype=np.float64)
             assert 'Time (sec)' in df.columns
-            assert 'Angle (deg)' in df.columns
+            assert 'Theta (deg)' in df.columns
+            assert 'Phi (deg)' in df.columns
 
-            list_deg = [math.radians(x) for x in list(df['Angle (deg)'].dropna())]  # noqa
-            self.avst_ini = np.array([list(df['Time (sec)'].dropna()), list_deg])  # noqa
+            theta_deg = [math.radians(x) for x in list(df['Theta (deg)'].dropna())]  # noqa
+            phi_deg = [math.radians(x) for x in list(df['Phi (deg)'].dropna())]  # noqa
+            self.avst_ini = np.array([list(df['Time (sec)'].dropna()), theta_deg, phi_deg])  # noqa
 
             tempa = []
             timelist = list(df['Time (sec)'].dropna())
@@ -364,7 +366,8 @@ class Simulator(object):
 
             xpad = (max(self.avst_ini[0]) - min(self.avst_ini[0])) * 0.05
             ypad = (max(self.avst_ini[1]) - min(self.avst_ini[1])) * 0.05
-            # self.avst was sim.avst
+            zpad = (max(self.avst_ini[2]) - min(self.avst_ini[2])) * 0.05
+
             self.ax_ani.set_xlim(min(self.avst_ini[0]) - xpad,
                                  max(self.avst_ini[0]) + xpad)
             self.ax_ani.set_ylim(min(self.avst_ini[1]) - ypad,
@@ -474,7 +477,7 @@ class Simulator(object):
                                               raycast_sin, raycast_cos)
         return output_i
 
-    def model_update_gpu(self, input_x, input_y, input_i, angle):
+    def model_update_gpu(self, input_x, input_y, input_i, theta, phi=0):
         """
         Take intersection data and model, add material to model according to
         the evaporation rate
@@ -499,13 +502,14 @@ class Simulator(object):
                            fill_value=math.nan, dtype=np.float64)
 
         rate = self.evaporation_rate
-        Rx = round(self.raycast_length * math.sin(angle), 10)
-        Ry = round(self.raycast_length * math.cos(angle), 10)
+        Rx = round(self.raycast_length * math.sin(theta), 10)
+        Ry = round(self.raycast_length * math.cos(theta), 10)
+        Rz = round(self.raycast_length * math.sin(phi), 10)
 
         bpg = int(np.ceil(xdim / self.tpb))
 
         model_gpu[bpg, self.tpb](input_x, input_y, input_i,
-                                 angle, Rx, Ry, rate,
+                                 theta, Rx, Ry, Rz, rate,
                                  output_x, output_y, output_i)
 
         output_x = output_x.reshape(1, xdim * ydim)
