@@ -21,29 +21,36 @@ class Application_Qt(object):
 
         self.graphcanvas = FigureCanvasQTAgg(self.sim.graph_ani)
         self.layoutPlot = QtWidgets.QWidget(self.graphicsView)
-
         self.gridPlot = QtWidgets.QGridLayout(self.layoutPlot)
         self.gridPlot.addWidget(self.graphcanvas)
+
+        self.graphcanvas2 = FigureCanvasQTAgg(self.sim.graph_ray)
+        self.layoutPlot2 = QtWidgets.QWidget(self.graphicsView_2)
+        self.gridPlot2 = QtWidgets.QGridLayout(self.layoutPlot2)
+        self.gridPlot2.addWidget(self.graphcanvas2)
 
         self.toolbar = NavigationToolbar2QT(self.graphcanvas,
                                             self.graphicsView)
         self.gridPlot.addWidget(self.toolbar)
 
         self.graphcanvas.draw_idle()
+        self.graphcanvas2.draw_idle()
         # Buttons not ready yet
         # self.pushButton_reset_graph.hide()
         self.pushButton_reset.hide()
+        self.pushButton_show_AvsT.hide()
+        self.pushButton_show_model.hide()
         log.info("Application window init complete")
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1000, 700)
+        MainWindow.resize(1015, 725)
 
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
 
         self.frame_inputs = QtWidgets.QFrame(self.centralwidget)
-        self.frame_inputs.setGeometry(QtCore.QRect(20, 20, 350, 635))
+        self.frame_inputs.setGeometry(QtCore.QRect(20, 35, 350, 649))
         self.frame_inputs.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.frame_inputs.setFrameShadow(QtWidgets.QFrame.Raised)
         self.frame_inputs.setObjectName("frame_inputs")
@@ -109,6 +116,12 @@ class Application_Qt(object):
         self.splitter_left.setGeometry(QtCore.QRect(5, 160, 130, 70))
         self.splitter_left.setOrientation(QtCore.Qt.Vertical)
         self.splitter_left.setObjectName("splitter_left")
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                           QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(
+            self.splitter_left.sizePolicy().hasHeightForWidth())
         self.pushButton_load_model = QtWidgets.QPushButton(self.splitter_left)
         self.pushButton_load_model.setObjectName("pushButton_load_model")
         self.pushButton_load_AvsT = QtWidgets.QPushButton(self.splitter_left)
@@ -120,6 +133,12 @@ class Application_Qt(object):
         self.splitter_right.setGeometry(QtCore.QRect(215, 160, 130, 70))
         self.splitter_right.setOrientation(QtCore.Qt.Vertical)
         self.splitter_right.setObjectName("splitter_right")
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
+                                           QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(
+            self.splitter_right.sizePolicy().hasHeightForWidth())
         self.pushButton_show_model = QtWidgets.QPushButton(self.splitter_right)
         self.pushButton_show_model.setObjectName("pushButton_show_model")
         self.pushButton_show_AvsT = QtWidgets.QPushButton(self.splitter_right)
@@ -127,45 +146,56 @@ class Application_Qt(object):
         self.pushButton_reset_graph = QtWidgets.QPushButton(self.splitter_right)  # noqa
         self.pushButton_reset_graph.setObjectName("pushButton_reset_graph")
 
+        self.label = QtWidgets.QLabel(self.frame_inputs)
+        self.label.setGeometry(QtCore.QRect(5, 240, 345, 40))
+        self.label.setWordWrap(True)
+        self.label.setObjectName("label")
         self.label_2 = QtWidgets.QLabel(self.frame_inputs)
-        self.label_2.setGeometry(QtCore.QRect(5, 280, 350, 30))
+        self.label_2.setGeometry(QtCore.QRect(5, 280, 345, 40))
         self.label_2.setWordWrap(True)
         self.label_2.setObjectName("label_2")
         self.label_3 = QtWidgets.QLabel(self.frame_inputs)
-        self.label_3.setGeometry(QtCore.QRect(5, 320, 350, 50))
+        self.label_3.setGeometry(QtCore.QRect(5, 320, 345, 70))
         self.label_3.setWordWrap(True)
         self.label_3.setObjectName("label_3")
         self.label_4 = QtWidgets.QLabel(self.frame_inputs)
-        self.label_4.setGeometry(QtCore.QRect(5, 380, 350, 60))
+        self.label_4.setGeometry(QtCore.QRect(5, 400, 345, 70))
         self.label_4.setWordWrap(True)
         self.label_4.setObjectName("label_4")
-        self.label = QtWidgets.QLabel(self.frame_inputs)
-        self.label.setGeometry(QtCore.QRect(5, 240, 350, 30))
-        self.label.setWordWrap(True)
-        self.label.setObjectName("label")
 
         self.pushButton_reset = QtWidgets.QPushButton(self.frame_inputs)
-        self.pushButton_reset.setGeometry(QtCore.QRect(100, 610, 80, 23))
+        self.pushButton_reset.setGeometry(QtCore.QRect(100, 620, 80, 23))
         self.pushButton_reset.setObjectName("pushButton_reset")
         self.progressBar = QtWidgets.QProgressBar(self.frame_inputs)
-        self.progressBar.setGeometry(QtCore.QRect(5, 580, 340, 25))
+        self.progressBar.setGeometry(QtCore.QRect(5, 590, 340, 25))
         self.progressBar.setProperty("value", 0)
         self.progressBar.setObjectName("progressBar")
         self.pushButton_quit = QtWidgets.QPushButton(self.frame_inputs)
-        self.pushButton_quit.setGeometry(QtCore.QRect(5, 610, 80, 23))
+        self.pushButton_quit.setGeometry(QtCore.QRect(5, 620, 80, 23))
         self.pushButton_quit.setObjectName("pushButton_quit")
         self.pushButton_start = QtWidgets.QPushButton(self.frame_inputs)
-        self.pushButton_start.setGeometry(QtCore.QRect(265, 610, 80, 23))
+        self.pushButton_start.setGeometry(QtCore.QRect(265, 620, 80, 23))
         self.pushButton_start.setObjectName("pushButton_start")
 
-        self.graphicsView = QtWidgets.QFrame(self.centralwidget)
-        self.graphicsView.setGeometry(QtCore.QRect(380, 10, 1000, 1000))
+        self.tabWidget = QtWidgets.QTabWidget(self.centralwidget)
+        self.tabWidget.setGeometry(QtCore.QRect(380, 5, 620, 680))
+        self.tabWidget.setObjectName("tabWidget")
+
+        self.tab = QtWidgets.QWidget()
+        self.tab.setObjectName("tab")
+        self.graphicsView = QtWidgets.QGraphicsView(self.tab)
+        self.graphicsView.setGeometry(QtCore.QRect(-1, -1, 620, 655))
         self.graphicsView.setObjectName("graphicsView")
+        self.tabWidget.addTab(self.tab, "")
+
+        self.tab_2 = QtWidgets.QWidget()
+        self.tab_2.setObjectName("tab_2")
+        self.graphicsView_2 = QtWidgets.QGraphicsView(self.tab_2)
+        self.graphicsView_2.setGeometry(QtCore.QRect(-1, -1, 620, 655))
+        self.graphicsView_2.setObjectName("graphicsView_2")
+        self.tabWidget.addTab(self.tab_2, "")
 
         MainWindow.setCentralWidget(self.centralwidget)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
-        self.statusbar.setObjectName("statusbar")
-        MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -231,6 +261,10 @@ class Application_Qt(object):
             _translate("MainWindow", "Quit"))
         self.pushButton_start.setText(
             _translate("MainWindow", "Start"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab),
+                                  _translate("MainWindow", "Model"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2),
+                                  _translate("MainWindow", "Raycast"))
         log.info("Applicaiton UI translate complete")
 
     def connectUi(self):
