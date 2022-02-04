@@ -234,7 +234,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 * math.sqrt(Sy ** 2 + Sx ** 2)
             theta = math.acos(
                 max(-1.0, min(1.0, (numerator / denominator))))
-            t = math.cos(theta) * rate
+            t = math.fabs(math.cos(theta) * rate)
             Ax = Px[i] + t * math.sin(angle)
             Ay = Py[i] + t * math.cos(angle)
             Vx[i, 0] = round(Ax, dec_acc)
@@ -263,7 +263,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                     * math.sqrt(Sy ** 2 + Sx ** 2)
                 theta = math.acos(
                     max(-1.0, min(1.0, (numerator / denominator))))
-                t1 = math.cos(theta) * rate
+                t1 = math.fabs(math.cos(theta) * rate)
                 p0_x = Px[i - 1] + t1 * math.sin(angle)
                 p0_y = Py[i - 1] + t1 * math.cos(angle)
                 p1_x = Px[i] + t1 * math.sin(angle)
@@ -277,7 +277,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                     * math.sqrt(Sy ** 2 + Sx ** 2)
                 theta = math.acos(
                     max(-1.0, min(1.0, (numerator / denominator))))
-                t2 = math.cos(theta) * rate
+                t2 = math.fabs(math.cos(theta) * rate)
                 p3_x = Px[i] + t2 * math.sin(angle)
                 p3_y = Py[i] + t2 * math.cos(angle)
                 p2_x = Px[i + 1] + t2 * math.sin(angle)
@@ -331,7 +331,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                                 * math.sqrt(Sy ** 2 + Sx ** 2)
                             theta = math.acos(
                                 max(-1.0, min(1.0, (numerator / denominator))))
-                            t = math.cos(theta) * rate
+                            t = math.fabs(math.cos(theta) * rate)
                             Ax = Px[i] + t * math.sin(angle)
                             Ay = Py[i] + t * math.cos(angle)
                             Vx[i, 0] = round(Ax, dec_acc)
@@ -349,7 +349,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                     * math.sqrt(Sy ** 2 + Sx ** 2)
                 theta = math.acos(
                     max(-1.0, min(1.0, (numerator / denominator))))
-                t = math.cos(theta) * rate
+                t = math.fabs(math.cos(theta) * rate)
                 Ax = Px[i] + t * math.sin(angle)
                 Ay = Py[i] + t * math.cos(angle)
                 Vx[i, 0] = Px[i]
@@ -368,7 +368,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                     * math.sqrt(Sy ** 2 + Sx ** 2)
                 theta = math.acos(
                     max(-1.0, min(1.0, (numerator / denominator))))
-                t = math.cos(theta) * rate
+                t = math.fabs(math.cos(theta) * rate)
                 Ax = Px[i] + t * math.sin(angle)
                 Ay = Py[i] + t * math.cos(angle)
                 Vx[i, 0] = round(Ax, dec_acc)
