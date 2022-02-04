@@ -146,8 +146,8 @@ def grid_gpu(Px, Py, Vx, Vy, model_resolution):
                         Vy[i, j] = round(Py[i] - (y * j), dec_acc)
 
 
-@cuda.jit('void(float64[:], float64[:], int8[:], float64, float64, float64, float64, float64[:,:], float64[:,:], float64[:,:])')  # noqa
-def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
+@cuda.jit('void(float64[:], float64[:], int8[:], float64, float64, float64, float64, float64, float64[:,:], float64[:,:], float64[:,:])')  # noqa
+def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
     '''
     WARNING: Core Code Function
 
@@ -187,6 +187,23 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
 
     The points inbetween vertices are no longer needed as the model will
     regrid these vertices to have an equal resolution.
+
+    Old 2D method for acute angle:
+    numerator = (Rx * Sx) + (Ry * Sy)
+            denominator = math.sqrt(Rx ** 2 + Ry ** 2) \
+                * math.sqrt(Sx ** 2 + Sy ** 2)
+    For 3D we must consider the normal to the plane and the raycast evap line
+    Segment S then has a parallel line 1 unit away T such that we have a finite
+    plane of width 1. The cross product yields our normal vector N.
+    S cross T = N, since T is parallel to S in Z, T = (0, 0, 1)
+    The resulting cross then = N = Sy xhat - Sx yhat such that
+    N = (Sy, -Sx, 0)
+    Thus the new dot product between the evap ray R and the Normal to the plane
+    is cos theta =
+    numerator = (Rx * Sy) - (Ry * Sx)
+    denominator = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+        * math.sqrt(Sy ** 2 + Sx ** 2)
+
     '''
     epsilon = 1e-10
     i = cuda.grid(1)
@@ -212,12 +229,12 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
             # Line segment is straight
             Sx = Px[i + 1] - Px[i - 1]
             Sy = Py[i + 1] - Py[i - 1]
-            numerator = (Rx * Sx) + (Ry * Sy)
-            denominator = math.sqrt(Rx ** 2 + Ry ** 2) \
-                * math.sqrt(Sx ** 2 + Sy ** 2)
+            numerator = (Rx * Sy) - (Ry * Sx)
+            denominator = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                * math.sqrt(Sy ** 2 + Sx ** 2)
             theta = math.acos(
                 max(-1.0, min(1.0, (numerator / denominator))))
-            t = math.sin(theta) * rate
+            t = math.cos(theta) * rate
             Ax = Px[i] + t * math.sin(angle)
             Ay = Py[i] + t * math.cos(angle)
             Vx[i, 0] = round(Ax, dec_acc)
@@ -241,12 +258,12 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
                 # A : Left point of vertice
                 Sx = Px[i] - Px[i - 1]
                 Sy = Py[i] - Py[i - 1]
-                numerator = (Rx * Sx) + (Ry * Sy)
-                denominator = math.sqrt(Rx ** 2 + Ry ** 2) * \
-                    math.sqrt(Sx ** 2 + Sy ** 2)
+                numerator = (Rx * Sy) - (Ry * Sx)
+                denominator = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                    * math.sqrt(Sy ** 2 + Sx ** 2)
                 theta = math.acos(
                     max(-1.0, min(1.0, (numerator / denominator))))
-                t1 = math.sin(theta) * rate
+                t1 = math.cos(theta) * rate
                 p0_x = Px[i - 1] + t1 * math.sin(angle)
                 p0_y = Py[i - 1] + t1 * math.cos(angle)
                 p1_x = Px[i] + t1 * math.sin(angle)
@@ -255,12 +272,12 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
                 # B : Right point of vertice
                 Sx = Px[i + 1] - Px[i]
                 Sy = Py[i + 1] - Py[i]
-                numerator = (Rx * Sx) + (Ry * Sy)
-                denominator = math.sqrt(Rx ** 2 + Ry ** 2) * \
-                    math.sqrt(Sx ** 2 + Sy ** 2)
+                numerator = (Rx * Sy) - (Ry * Sx)
+                denominator = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                    * math.sqrt(Sy ** 2 + Sx ** 2)
                 theta = math.acos(
                     max(-1.0, min(1.0, (numerator / denominator))))
-                t2 = math.sin(theta) * rate
+                t2 = math.cos(theta) * rate
                 p3_x = Px[i] + t2 * math.sin(angle)
                 p3_y = Py[i] + t2 * math.cos(angle)
                 p2_x = Px[i + 1] + t2 * math.sin(angle)
@@ -308,12 +325,13 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
                             # Line segment is roughly straight
                             Sx = Px[i + 1] - Px[i - 1]
                             Sy = Py[i + 1] - Py[i - 1]
-                            numerator = (Rx * Sx) + (Ry * Sy)
-                            denominator = math.sqrt(Rx ** 2 + Ry ** 2) * \
-                                math.sqrt(Sx ** 2 + Sy ** 2)
+                            numerator = (Rx * Sy) - (Ry * Sx)
+                            denominator = math.sqrt(
+                                Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                                * math.sqrt(Sy ** 2 + Sx ** 2)
                             theta = math.acos(
                                 max(-1.0, min(1.0, (numerator / denominator))))
-                            t = math.sin(theta) * rate
+                            t = math.cos(theta) * rate
                             Ax = Px[i] + t * math.sin(angle)
                             Ay = Py[i] + t * math.cos(angle)
                             Vx[i, 0] = round(Ax, dec_acc)
@@ -326,12 +344,12 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
                 # Shaded corner evap | Preserve the i point
                 Sx = Px[i + 1] - Px[i]
                 Sy = Py[i + 1] - Py[i]
-                numerator = (Rx * Sx) + (Ry * Sy)
-                denominator = math.sqrt(Rx ** 2 + Ry ** 2) * \
-                    math.sqrt(Sx ** 2 + Sy ** 2)
+                numerator = (Rx * Sy) - (Ry * Sx)
+                denominator = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                    * math.sqrt(Sy ** 2 + Sx ** 2)
                 theta = math.acos(
                     max(-1.0, min(1.0, (numerator / denominator))))
-                t = math.sin(theta) * rate
+                t = math.cos(theta) * rate
                 Ax = Px[i] + t * math.sin(angle)
                 Ay = Py[i] + t * math.cos(angle)
                 Vx[i, 0] = Px[i]
@@ -345,12 +363,12 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, rate, Vx, Vy, Vi):
                 # Shaded corner evap | Preserve the i point
                 Sx = Px[i] - Px[i - 1]
                 Sy = Py[i] - Py[i - 1]
-                numerator = (Rx * Sx) + (Ry * Sy)
-                denominator = math.sqrt(Rx ** 2 + Ry ** 2) * \
-                    math.sqrt(Sx ** 2 + Sy ** 2)
+                numerator = (Rx * Sy) - (Ry * Sx)
+                denominator = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                    * math.sqrt(Sy ** 2 + Sx ** 2)
                 theta = math.acos(
                     max(-1.0, min(1.0, (numerator / denominator))))
-                t = math.sin(theta) * rate
+                t = math.cos(theta) * rate
                 Ax = Px[i] + t * math.sin(angle)
                 Ay = Py[i] + t * math.cos(angle)
                 Vx[i, 0] = round(Ax, dec_acc)

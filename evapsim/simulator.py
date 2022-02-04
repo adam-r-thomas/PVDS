@@ -100,6 +100,23 @@ class Simulator(object):
         self.tpb_2d = (self.tpb // 2, self.tpb // 2)
         self.tickrate = 1.0
 
+        self.graphs()
+
+        log.info("Simulator init complete.")
+
+        self.window = QtWidgets.QApplication(sys.argv)
+        self.app = application.Application_Qt(self)
+        log.info("Application Window running:")
+        self.app.MainWindow.show()
+
+        self.simulation_parameters()
+        log.info("Simulator running:")
+        sys.exit(self.window.exec_())
+
+    def graphs(self):
+        """Setup graphs Model and Raycast
+        """
+        # Model animation
         self.graph_ani = plt.Figure(figsize=(6, 6), dpi=100)
         self.ax_ani = self.graph_ani.add_subplot(111, aspect='equal')
         self.ax_ani.grid(1)
@@ -111,22 +128,24 @@ class Simulator(object):
         self.line_ani, = self.ax_ani.plot([], [], 'r-', lw=2)
         self.line_angle, = self.ax_ani.plot([], [], 'g-', lw=0.5)
         self.time_text = self.ax_ani.text(
-            0.01, 0.95, '', transform=self.ax_ani.transAxes)
+            0.01, 1.01, '', transform=self.ax_ani.transAxes)
         self.angle_text = self.ax_ani.text(
-            0.01, 0.90, '', transform=self.ax_ani.transAxes)
+            0.25, 1.01, '', transform=self.ax_ani.transAxes)
         self.line_static, = self.ax_ani.plot([], [], 'k-', lw=2)
 
         self.graph_ani.tight_layout()
-        log.info("Simulator init complete.")
 
-        self.window = QtWidgets.QApplication(sys.argv)
-        self.app = application.Application_Qt(self)
-        log.info("Application Window running:")
-        self.app.MainWindow.show()
+        # Raycast profile
+        self.graph_ray = plt.Figure(figsize=(6, 6), dpi=100)
+        self.ax1_ray = self.graph_ray.add_subplot(211)
+        self.ax2_ray = self.graph_ray.add_subplot(212)
 
-        self.simulation_parameters()
-        log.info("Simulator running:")
-        sys.exit(self.window.exec_())
+        self.ax1_ray.grid(1)
+        self.ax2_ray.grid(1)
+        self.ax1_ray.set_xlabel("Time (s)", fontsize=12)
+        self.ax2_ray.set_xlabel("Time (s)", fontsize=12)
+        self.ax1_ray.set_ylabel("Theta (rad)", fontsize=12)
+        self.ax2_ray.set_ylabel("Phi (rad)", fontsize=12)
 
     def run(self):
         '''
@@ -347,10 +366,12 @@ class Simulator(object):
             assert '.csv' in filepath.suffix
             df = pd.read_csv(filepath, dtype=np.float64)
             assert 'Time (sec)' in df.columns
-            assert 'Angle (deg)' in df.columns
+            assert 'Theta (deg)' in df.columns
+            assert 'Phi (deg)' in df.columns
 
-            list_deg = [math.radians(x) for x in list(df['Angle (deg)'].dropna())]  # noqa
-            self.avst_ini = np.array([list(df['Time (sec)'].dropna()), list_deg])  # noqa
+            theta_deg = [math.radians(x) for x in list(df['Theta (deg)'].dropna())]  # noqa
+            phi_deg = [math.radians(x) for x in list(df['Phi (deg)'].dropna())]  # noqa
+            self.avst_ini = np.array([list(df['Time (sec)'].dropna()), theta_deg, phi_deg])  # noqa
 
             tempa = []
             timelist = list(df['Time (sec)'].dropna())
@@ -360,17 +381,22 @@ class Simulator(object):
             del tempa
             del timelist
 
-            self.line_static.set_data(self.avst_ini[0], self.avst_ini[1])
+            # self.line_static.set_data(self.avst_ini[0], self.avst_ini[1])
 
-            xpad = (max(self.avst_ini[0]) - min(self.avst_ini[0])) * 0.05
-            ypad = (max(self.avst_ini[1]) - min(self.avst_ini[1])) * 0.05
-            # self.avst was sim.avst
-            self.ax_ani.set_xlim(min(self.avst_ini[0]) - xpad,
-                                 max(self.avst_ini[0]) + xpad)
-            self.ax_ani.set_ylim(min(self.avst_ini[1]) - ypad,
-                                 max(self.avst_ini[1]) + ypad)
+            # xpad = (max(self.avst_ini[0]) - min(self.avst_ini[0])) * 0.05
+            # ypad = (max(self.avst_ini[1]) - min(self.avst_ini[1])) * 0.05
+            # zpad = (max(self.avst_ini[2]) - min(self.avst_ini[2])) * 0.05
 
-            self.app.graphcanvas.draw_idle()
+            self.ax1_ray.plot(self.avst_ini[0], self.avst_ini[1])
+            self.ax2_ray.plot(self.avst_ini[0], self.avst_ini[2])
+
+            # self.ax_ani.set_xlim(min(self.avst_ini[0]) - xpad,
+            #                      max(self.avst_ini[0]) + xpad)
+            # self.ax_ani.set_ylim(min(self.avst_ini[1]) - ypad,
+            #                      max(self.avst_ini[1]) + ypad)
+
+            # self.app.graphcanvas.draw_idle()
+            self.app.graphcanvas2.draw_idle()
             log.info("AvsT file loaded: %s" % filepath)
 
     def save_csv_model(self):
@@ -392,7 +418,8 @@ class Simulator(object):
 
             df3 = pd.DataFrame()
             df3['Time (sec)'] = self.avst_ini[0]
-            df3['Angle (deg)'] = [math.degrees(x) for x in self.avst_ini[1]]
+            df3['Theta (deg)'] = [math.degrees(x) for x in self.avst_ini[1]]
+            df3['Phi (deg)'] = [math.degrees(x) for x in self.avst_ini[2]]
 
             df4 = pd.DataFrame()
             df4['Model Resolution (A)'] = [self.model_resolution]
@@ -474,7 +501,7 @@ class Simulator(object):
                                               raycast_sin, raycast_cos)
         return output_i
 
-    def model_update_gpu(self, input_x, input_y, input_i, angle):
+    def model_update_gpu(self, input_x, input_y, input_i, theta, phi=0):
         """
         Take intersection data and model, add material to model according to
         the evaporation rate
@@ -499,13 +526,14 @@ class Simulator(object):
                            fill_value=math.nan, dtype=np.float64)
 
         rate = self.evaporation_rate
-        Rx = round(self.raycast_length * math.sin(angle), 10)
-        Ry = round(self.raycast_length * math.cos(angle), 10)
+        Rx = round(self.raycast_length * math.sin(theta), 10)
+        Ry = round(self.raycast_length * math.cos(theta), 10)
+        Rz = round(self.raycast_length * math.sin(phi), 10)
 
         bpg = int(np.ceil(xdim / self.tpb))
 
         model_gpu[bpg, self.tpb](input_x, input_y, input_i,
-                                 angle, Rx, Ry, rate,
+                                 theta, Rx, Ry, Rz, rate,
                                  output_x, output_y, output_i)
 
         output_x = output_x.reshape(1, xdim * ydim)
