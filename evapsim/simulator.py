@@ -100,7 +100,20 @@ class Simulator(object):
         self.tpb_2d = (self.tpb // 2, self.tpb // 2)
         self.tickrate = 1.0
 
+        self.model_ini = [[], []]
+        self.model_x = []
+        self.model_y = []
+        self.avst_ini = [[], [], []]
+
+        self.graph_ani = plt.Figure(figsize=(6, 6), dpi=100)
+        self.ax_ani = self.graph_ani.add_subplot(111)  # , aspect='equal')
+
+        self.graph_ray = plt.Figure(figsize=(6, 6), dpi=100)
+        self.ax1_ray = self.graph_ray.add_subplot(211)
+        self.ax2_ray = self.graph_ray.add_subplot(212)
+
         self.graphs()
+        self.paused = False
 
         log.info("Simulator init complete.")
 
@@ -117,8 +130,6 @@ class Simulator(object):
         """Setup graphs Model and Raycast
         """
         # Model animation
-        self.graph_ani = plt.Figure(figsize=(6, 6), dpi=100)
-        self.ax_ani = self.graph_ani.add_subplot(111, aspect='equal')
         self.ax_ani.grid(1)
         self.ax_ani.set_xlabel("Model Pos. X (A)", fontsize=12)
         self.ax_ani.set_ylabel("Model Pos. Y (A)", fontsize=12)
@@ -136,16 +147,33 @@ class Simulator(object):
         self.graph_ani.tight_layout()
 
         # Raycast profile
-        self.graph_ray = plt.Figure(figsize=(6, 6), dpi=100)
-        self.ax1_ray = self.graph_ray.add_subplot(211)
-        self.ax2_ray = self.graph_ray.add_subplot(212)
-
         self.ax1_ray.grid(1)
         self.ax2_ray.grid(1)
         self.ax1_ray.set_xlabel("Time (s)", fontsize=12)
         self.ax2_ray.set_xlabel("Time (s)", fontsize=12)
         self.ax1_ray.set_ylabel("Theta (rad)", fontsize=12)
         self.ax2_ray.set_ylabel("Phi (rad)", fontsize=12)
+
+    def reset(self):
+        """
+        Resets simulator to start state
+        """
+        self.model_ini = [[], []]
+        self.model_x = []
+        self.model_y = []
+        self.avst_ini = [[], [], []]
+
+        self.ax_ani.cla()
+        self.ax1_ray.cla()
+        self.ax2_ray.cla()
+
+        self.graphs()
+
+    def abort(self):
+        """
+        Ends current simulator run
+        """
+        print("Not functional yet!")
 
     def run(self):
         '''
@@ -175,12 +203,6 @@ class Simulator(object):
             Intersection function core code that displays each finished
             calculation on the self.graph_ani
             '''
-            # print(self.loop_counter)
-            # self.loop_counter += 1
-            # for i in range(self.model_x.shape[0]):
-            #     print(i, "|", self.model_x[i], self.model_y[i], "|", self.vert_x[i], self.vert_y[i], "|", self.merge_x[i], self.merge_y[i])  # noqa
-            #     print(i, "|", self.model_x[i], self.model_y[i], "|", self.vert_x[i], self.vert_y[i], "|", self.vert_i[i, 0], self.vert_i[i, 1])  # noqa
-
             timer_start = time.process_time()
             log.info("")
             log.info("Evap Step: %s" % timer_start)
@@ -234,7 +256,7 @@ class Simulator(object):
                 print("Error occurred with self.model_merge")
                 return
 
-            # # Re-grid the model
+            # Re-grid the model
             try:
                 log.info("GPU: Model Grid")
                 self.model_x, self.model_y = self.model_grid_gpu(self.merge_x,
@@ -258,22 +280,14 @@ class Simulator(object):
                 [0, round(self.raycast_length * math.cos(angle), 10)])
 
             # Update progress to user
-            # app.progress.set(100 * i // self.total_fps)
             self.app.progressBar.setProperty(
                 "value", 100 * i // self.total_fps)
 
             # Remaining calculations
             timer_end = time.process_time()
-            # seconds = (timer_end - timer_start) * (self.total_fps - i)
-            # m, s = divmod(seconds, 60)
-            # h, m = divmod(m, 60)
-
-            # Spacing in string to center text
-            # app.progresstext.set(
-            #     '                           Time Remaining: %d:%02d:%02d' % (h, m, s))  # noqa
             log.info("Evap Time: %s" % timer_end)
             self.loop_counter += 1
-            # log.info("Evap Seconds: %s" % seconds)
+
             return (self.line_ani,
                     self.line_angle,
                     self.time_text,
@@ -294,14 +308,17 @@ class Simulator(object):
                                                   repeat=False)
 
         self.app.graphcanvas.draw_idle()
+        # self.app.pushButton_start.setDisabled(False)
 
     def simulation_parameters(self):
         '''
         Starting parameters of the evaporation - pulls values from the GUI
         '''
-        self.model_resolution = float(self.app.lineEdit_model_resolution.text())
-        self.evaporation_rate = (float(self.app.lineEdit_evap_rate.text())
-                                 * self.tickrate)
+        self.model_resolution = float(
+            self.app.lineEdit_model_resolution.text())
+
+        self.evaporation_rate = (float(
+            self.app.lineEdit_evap_rate.text()) * self.tickrate)
 
         self.evaporation_time = float(self.app.lineEdit_evap_time.text())
         self.gridspace = float(self.app.lineEdit_grid_space.text())
@@ -325,29 +342,33 @@ class Simulator(object):
             filter="*.csv")
         if filepath:
             filepath = Path(filepath)
-            assert '.csv' in filepath.suffix
-            df = pd.read_csv(filepath, dtype=np.float64)
-            assert 'Model x (A)' in df.columns
-            assert 'Model y (A)' in df.columns
+            try:
+                assert '.csv' in filepath.suffix
+                df = pd.read_csv(filepath, dtype=np.float64)
+                assert 'Model x (A)' in df.columns
+                assert 'Model y (A)' in df.columns
 
-            self.model_ini = np.array([list(df['Model x (A)'].dropna()),
-                                       list(df['Model y (A)'].dropna())])
+                self.model_ini = np.array([list(df['Model x (A)'].dropna()),
+                                           list(df['Model y (A)'].dropna())])
 
-            self.line_static.set_data(self.model_ini[0], self.model_ini[1])
+                self.line_static.set_data(self.model_ini[0], self.model_ini[1])
 
-            self.model_x, self.model_y = self.model_grid_gpu(self.model_ini[0],
-                                                             self.model_ini[1])
+                self.model_x, self.model_y = self.model_grid_gpu(
+                    self.model_ini[0],
+                    self.model_ini[1])
 
-            xpad = (max(self.model_ini[0]) - min(self.model_ini[0])) * 0.05
-            ypad = (max(self.model_ini[1]) - min(self.model_ini[1])) * 0.05
+                xpad = (max(self.model_ini[0]) - min(self.model_ini[0])) * 0.05
+                ypad = (max(self.model_ini[1]) - min(self.model_ini[1])) * 0.05
 
-            self.ax_ani.set_xlim(min(self.model_ini[0]) - xpad,
-                                 max(self.model_ini[0]) + xpad)
-            self.ax_ani.set_ylim(min(self.model_ini[1]) - ypad,
-                                 max(self.model_ini[1]) + ypad)
+                self.ax_ani.set_xlim(min(self.model_ini[0]) - xpad,
+                                     max(self.model_ini[0]) + xpad)
+                self.ax_ani.set_ylim(min(self.model_ini[1]) - ypad,
+                                     max(self.model_ini[1]) + ypad)
 
-            self.app.graphcanvas.draw_idle()
-            log.info("Model file loaded: %s" % filepath)
+                self.app.graphcanvas.draw_idle()
+                log.info("Model file loaded: %s" % filepath)
+            except AssertionError:
+                log.info("Invalid file selected.")
 
     def load_csv_angletime(self):
         '''
@@ -362,42 +383,35 @@ class Simulator(object):
             caption="Evaporation Simulator - Load angle vs time file",
             filter="*.csv")
         if filepath:
-            filepath = Path(filepath)
-            assert '.csv' in filepath.suffix
-            df = pd.read_csv(filepath, dtype=np.float64)
-            assert 'Time (sec)' in df.columns
-            assert 'Theta (deg)' in df.columns
-            assert 'Phi (deg)' in df.columns
+            try:
+                filepath = Path(filepath)
+                assert '.csv' in filepath.suffix
+                df = pd.read_csv(filepath, dtype=np.float64)
+                assert 'Time (sec)' in df.columns
+                assert 'Theta (deg)' in df.columns
+                assert 'Phi (deg)' in df.columns
 
-            theta_deg = [math.radians(x) for x in list(df['Theta (deg)'].dropna())]  # noqa
-            phi_deg = [math.radians(x) for x in list(df['Phi (deg)'].dropna())]  # noqa
-            self.avst_ini = np.array([list(df['Time (sec)'].dropna()), theta_deg, phi_deg])  # noqa
+                theta_deg = [math.radians(x) for x in list(df['Theta (deg)'].dropna())]  # noqa
+                phi_deg = [math.radians(x) for x in list(df['Phi (deg)'].dropna())]  # noqa
+                self.avst_ini = np.array([list(df['Time (sec)'].dropna()), theta_deg, phi_deg])  # noqa
 
-            tempa = []
-            timelist = list(df['Time (sec)'].dropna())
-            for i in range(1, (len(df['Time (sec)'].dropna()))):
-                tempa.append(timelist[i] - timelist[i - 1])
-            self.tickrate = np.array(tempa).mean()
-            del tempa
-            del timelist
+                tempa = []
+                timelist = list(df['Time (sec)'].dropna())
+                for i in range(1, (len(df['Time (sec)'].dropna()))):
+                    tempa.append(timelist[i] - timelist[i - 1])
+                self.tickrate = np.array(tempa).mean()
+                del tempa
+                del timelist
 
-            # self.line_static.set_data(self.avst_ini[0], self.avst_ini[1])
+                self.ax1_ray.plot(self.avst_ini[0], self.avst_ini[1],
+                                  label="ax1")
+                self.ax2_ray.plot(self.avst_ini[0], self.avst_ini[2],
+                                  label="ax2")
 
-            # xpad = (max(self.avst_ini[0]) - min(self.avst_ini[0])) * 0.05
-            # ypad = (max(self.avst_ini[1]) - min(self.avst_ini[1])) * 0.05
-            # zpad = (max(self.avst_ini[2]) - min(self.avst_ini[2])) * 0.05
-
-            self.ax1_ray.plot(self.avst_ini[0], self.avst_ini[1])
-            self.ax2_ray.plot(self.avst_ini[0], self.avst_ini[2])
-
-            # self.ax_ani.set_xlim(min(self.avst_ini[0]) - xpad,
-            #                      max(self.avst_ini[0]) + xpad)
-            # self.ax_ani.set_ylim(min(self.avst_ini[1]) - ypad,
-            #                      max(self.avst_ini[1]) + ypad)
-
-            # self.app.graphcanvas.draw_idle()
-            self.app.graphcanvas2.draw_idle()
-            log.info("AvsT file loaded: %s" % filepath)
+                self.app.graphcanvas2.draw_idle()
+                log.info("AvsT file loaded: %s" % filepath)
+            except AssertionError:
+                log.info("Invalid file selected.")
 
     def save_csv_model(self):
         '''

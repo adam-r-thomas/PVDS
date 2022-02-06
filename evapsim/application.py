@@ -35,11 +35,8 @@ class Application_Qt(object):
 
         self.graphcanvas.draw_idle()
         self.graphcanvas2.draw_idle()
-        # Buttons not ready yet
-        # self.pushButton_reset_graph.hide()
-        self.pushButton_reset.hide()
-        self.pushButton_show_AvsT.hide()
-        self.pushButton_show_model.hide()
+
+        self.pushButton_pause.setDisabled(True)
         log.info("Application window init complete")
 
     def setupUi(self, MainWindow):
@@ -114,37 +111,51 @@ class Application_Qt(object):
 
         self.splitter_left = QtWidgets.QSplitter(self.frame_inputs)
         self.splitter_left.setGeometry(QtCore.QRect(5, 160, 130, 70))
-        self.splitter_left.setOrientation(QtCore.Qt.Vertical)
-        self.splitter_left.setObjectName("splitter_left")
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
                                            QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(
             self.splitter_left.sizePolicy().hasHeightForWidth())
+        self.splitter_left.setSizePolicy(sizePolicy)
+        self.splitter_left.setOrientation(QtCore.Qt.Vertical)
+        self.splitter_left.setObjectName("splitter_left")
         self.pushButton_load_model = QtWidgets.QPushButton(self.splitter_left)
         self.pushButton_load_model.setObjectName("pushButton_load_model")
+        self.pushButton_load_model.setMinimumSize(QtCore.QSize(0, 20))
+        self.pushButton_load_model.setMaximumSize(QtCore.QSize(130, 20))
         self.pushButton_load_AvsT = QtWidgets.QPushButton(self.splitter_left)
         self.pushButton_load_AvsT.setObjectName("pushButton_load_AvsT")
+        self.pushButton_load_AvsT.setMinimumSize(QtCore.QSize(0, 20))
+        self.pushButton_load_AvsT.setMaximumSize(QtCore.QSize(130, 20))
         self.pushButton_save_model = QtWidgets.QPushButton(self.splitter_left)
         self.pushButton_save_model.setObjectName("pushButton_save_model")
+        self.pushButton_save_model.setMinimumSize(QtCore.QSize(0, 20))
+        self.pushButton_save_model.setMaximumSize(QtCore.QSize(130, 20))
 
         self.splitter_right = QtWidgets.QSplitter(self.frame_inputs)
         self.splitter_right.setGeometry(QtCore.QRect(215, 160, 130, 70))
-        self.splitter_right.setOrientation(QtCore.Qt.Vertical)
-        self.splitter_right.setObjectName("splitter_right")
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred,
                                            QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(
             self.splitter_right.sizePolicy().hasHeightForWidth())
-        self.pushButton_show_model = QtWidgets.QPushButton(self.splitter_right)
-        self.pushButton_show_model.setObjectName("pushButton_show_model")
-        self.pushButton_show_AvsT = QtWidgets.QPushButton(self.splitter_right)
-        self.pushButton_show_AvsT.setObjectName("pushButton_show_AvsT")
+        self.splitter_right.setSizePolicy(sizePolicy)
+        self.splitter_right.setOrientation(QtCore.Qt.Vertical)
+        self.splitter_right.setObjectName("splitter_right")
+        self.pushButton_simAbort = QtWidgets.QPushButton(self.splitter_right)
+        self.pushButton_simAbort.setObjectName("pushButton_simAbort")
+        self.pushButton_simAbort.setMinimumSize(QtCore.QSize(0, 20))
+        self.pushButton_simAbort.setMaximumSize(QtCore.QSize(130, 20))
+        self.pushButton_simReset = QtWidgets.QPushButton(self.splitter_right)
+        self.pushButton_simReset.setObjectName("pushButton_simReset")
+        self.pushButton_simReset.setMinimumSize(QtCore.QSize(0, 20))
+        self.pushButton_simReset.setMaximumSize(QtCore.QSize(130, 20))
         self.pushButton_reset_graph = QtWidgets.QPushButton(self.splitter_right)  # noqa
         self.pushButton_reset_graph.setObjectName("pushButton_reset_graph")
+        self.pushButton_reset_graph.setMinimumSize(QtCore.QSize(0, 20))
+        self.pushButton_reset_graph.setMaximumSize(QtCore.QSize(130, 20))
 
         self.label = QtWidgets.QLabel(self.frame_inputs)
         self.label.setGeometry(QtCore.QRect(5, 240, 345, 40))
@@ -163,9 +174,9 @@ class Application_Qt(object):
         self.label_4.setWordWrap(True)
         self.label_4.setObjectName("label_4")
 
-        self.pushButton_reset = QtWidgets.QPushButton(self.frame_inputs)
-        self.pushButton_reset.setGeometry(QtCore.QRect(100, 620, 80, 23))
-        self.pushButton_reset.setObjectName("pushButton_reset")
+        self.pushButton_pause = QtWidgets.QPushButton(self.frame_inputs)
+        self.pushButton_pause.setGeometry(QtCore.QRect(180, 620, 80, 23))
+        self.pushButton_pause.setObjectName("pushButton_pause")
         self.progressBar = QtWidgets.QProgressBar(self.frame_inputs)
         self.progressBar.setGeometry(QtCore.QRect(5, 590, 340, 25))
         self.progressBar.setProperty("value", 0)
@@ -198,6 +209,7 @@ class Application_Qt(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         self.retranslateUi(MainWindow)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         log.info("Application UI setup complete")
 
@@ -241,12 +253,12 @@ class Application_Qt(object):
             _translate("MainWindow", "Load Angle vs Time"))
         self.pushButton_save_model.setText(
             _translate("MainWindow", "Save Evap Model"))
-        self.pushButton_show_model.setText(
-            _translate("MainWindow", "Show Model"))
-        self.pushButton_show_AvsT.setText(
-            _translate("MainWindow", "Show Angle vs Time"))
+        self.pushButton_simAbort.setText(
+            _translate("MainWindow", "Abort Sim"))
+        self.pushButton_simReset.setText(
+            _translate("MainWindow", "Clear Models"))
         self.pushButton_reset_graph.setText(
-            _translate("MainWindow", "Reset Graph"))
+            _translate("MainWindow", "Reset View"))
         self.label_2.setText(
             _translate("MainWindow", "<b>Evaporation Rate:</b> Angstrom / sec of material deposition. Rate is affected by angle: cos(theta)."))  # noqa
         self.label_3.setText(
@@ -255,8 +267,8 @@ class Application_Qt(object):
             _translate("MainWindow", "<b>Raycast Length:</b> Length of the ray cast from each vertice. Too short a ray can have evaporation in bad places. Too long a ray can produce math errors (float point problems)."))  # noqa
         self.label.setText(
             _translate("MainWindow", "<b>Model Resolution:</b> The density of the raycasts on the model."))  # noqa
-        self.pushButton_reset.setText(
-            _translate("MainWindow", "Reset"))
+        self.pushButton_pause.setText(
+            _translate("MainWindow", "Pause"))
         self.pushButton_quit.setText(
             _translate("MainWindow", "Quit"))
         self.pushButton_start.setText(
@@ -265,7 +277,7 @@ class Application_Qt(object):
                                   _translate("MainWindow", "Model"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_2),
                                   _translate("MainWindow", "Raycast"))
-        log.info("Applicaiton UI translate complete")
+        log.info("Application UI translate complete")
 
     def connectUi(self):
         """
@@ -283,53 +295,61 @@ class Application_Qt(object):
         self.pushButton_load_AvsT.clicked.connect(self.sim.load_csv_angletime)
         self.pushButton_save_model.clicked.connect(self.sim.save_csv_model)
 
-        self.pushButton_show_model.clicked.connect(self.displayModel)
-        self.pushButton_show_AvsT.clicked.connect(self.displayWave)
+        self.pushButton_simAbort.clicked.connect(self.dialog_abort)
+        self.pushButton_simReset.clicked.connect(self.dialog_clear)
         self.pushButton_reset_graph.clicked.connect(self.displayReset)
 
-        self.pushButton_start.clicked.connect(self.sim.run)
+        self.pushButton_start.clicked.connect(self.simStart)
         self.pushButton_quit.clicked.connect(self._quit)
+        self.pushButton_pause.clicked.connect(self.simPause)
         log.info("Application UI buttons connected")
 
-    def displayWave(self):
-        try:
-            xpad = (max(self.sim.avst_ini[1])
-                    - min(self.sim.avst_ini[1])) * 0.05
-            ypad = (max(self.sim.avst_ini[0])
-                    - min(self.sim.avst_ini[0])) * 0.05
+    def simAbort(self):
+        """
+        Replace this with Abort run
+        """
+        self.sim.abort()
 
-            self.sim.line_static.set_data(self.sim.avst_ini[0],
-                                          self.sim.avst_ini[1])
+    def simStart(self):
+        self.pushButton_pause.setDisabled(False)
+        # self.pushButton_start.setDisabled(True)
+        self.sim.run()
 
-            self.sim.ax_ani.set_xlim(min(self.sim.avst_ini[0]) - xpad,
-                                     max(self.sim.avst_ini[0]) + xpad)
-            self.sim.ax_ani.set_ylim(min(self.sim.avst_ini[1]) - ypad,
-                                     max(self.sim.avst_ini[1]) + ypad)
-            self.graphcanvas.draw_idle()
-
-        except AttributeError:
-            log.info("No wave present to reset.")
-
-    def displayModel(self):
-        try:
-            xpad = (max(self.sim.model_ini[0])
-                    - min(self.sim.model_ini[0])) * 0.05
-            ypad = (max(self.sim.model_ini[1])
-                    - min(self.sim.model_ini[1])) * 0.05
-
-            self.sim.line_static.set_data(self.sim.model_ini[0],
-                                          self.sim.model_ini[1])
-            self.sim.ax_ani.set_xlim(min(self.sim.model_ini[0]) - xpad,
-                                     max(self.sim.model_ini[0]) + xpad)
-            self.sim.ax_ani.set_ylim(min(self.sim.model_ini[1]) - ypad,
-                                     max(self.sim.model_ini[1]) + ypad)
-            self.graphcanvas.draw_idle()
-        except AttributeError:
-            log.info("No model present to reset.")
+    def simPause(self):
+        if self.sim.paused:
+            log.info("Resuming")
+            self.sim.simulation.resume()
+            self.sim.paused = False
+        else:
+            log.info("Simulator paused")
+            self.sim.simulation.pause()
+            self.sim.paused = True
 
     def displayReset(self):
         self.toolbar._update_view()
         self.toolbar.home()
+
+    def dialog_clear(self):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        ret = msg.question(self.MainWindow, "Clear All?",
+                           "Are you sure you want to clear data?",
+                           buttons=QtWidgets.QMessageBox.Yes |
+                           QtWidgets.QMessageBox.No)
+        if ret == msg.Yes:
+            self.sim.reset()
+            self.graphcanvas.draw_idle()
+            self.graphcanvas2.draw_idle()
+
+    def dialog_abort(self):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
+        ret = msg.question(self.MainWindow, "Abort Sim?",
+                           "Are you sure you want to abort run?",
+                           buttons=QtWidgets.QMessageBox.Yes |
+                           QtWidgets.QMessageBox.No)
+        if ret == msg.Yes:
+            self.simAbort()
 
     def _quit(self):
         log.info("Program End")
