@@ -37,6 +37,7 @@ class Application_Qt(object):
         self.graphcanvas2.draw_idle()
 
         self.pushButton_pause.setDisabled(True)
+        self.pushButton_simAbort.setDisabled(True)
         log.info("Application window init complete")
 
     def setupUi(self, MainWindow):
@@ -305,14 +306,16 @@ class Application_Qt(object):
         log.info("Application UI buttons connected")
 
     def simAbort(self):
-        """
-        Replace this with Abort run
-        """
-        self.sim.abort()
+        self.sim.simulation.pause()
+        self.sim.simulation._stop()
+        self.pushButton_pause.setDisabled(True)
+        self.pushButton_simAbort.setDisabled(True)
+        self.pushButton_start.setDisabled(False)
 
     def simStart(self):
         self.pushButton_pause.setDisabled(False)
-        # self.pushButton_start.setDisabled(True)
+        self.pushButton_simAbort.setDisabled(False)
+        self.pushButton_start.setDisabled(True)
         self.sim.run()
 
     def simPause(self):

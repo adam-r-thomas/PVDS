@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="evapsim",
-    version="0.0.1",
+    version="0.0.2",
     description="Evaporation simulator for thermal, ebeam, sputter",
     author="Adam R Thomas",
     classifiers=["Programming Language :: Python :: 3.10"],

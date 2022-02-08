@@ -169,18 +169,24 @@ class Simulator(object):
 
         self.graphs()
 
-    def abort(self):
-        """
-        Ends current simulator run
-        """
-        print("Not functional yet!")
-
     def run(self):
         '''
         Run the simulation and present results to animation graph
         '''
         log.info("Simulator run started.")
         self.simulation_parameters()
+
+        try:
+            assert self.model_x != []
+            assert self.model_y != []
+            assert self.avst_ini != [[], [], []]
+
+        except AssertionError:
+            log.info("Model assertion error. Check model and angle parameters")
+            self.app.pushButton_pause.setDisabled(True)
+            self.app.pushButton_simAbort.setDisabled(True)
+            self.app.pushButton_start.setDisabled(False)
+            return
 
         def ani_init():
             '''
@@ -281,12 +287,18 @@ class Simulator(object):
 
             # Update progress to user
             self.app.progressBar.setProperty(
-                "value", 100 * i // self.total_fps)
+                "value", 100 * i // (self.total_fps - 1))
 
             # Remaining calculations
             timer_end = time.process_time()
             log.info("Evap Time: %s" % timer_end)
             self.loop_counter += 1
+
+            if i == (self.total_fps - 1):
+                # Simulation complete
+                self.app.pushButton_start.setDisabled(False)
+                self.app.pushButton_pause.setDisabled(True)
+                self.app.pushButton_simAbort.setDisabled(True)
 
             return (self.line_ani,
                     self.line_angle,
