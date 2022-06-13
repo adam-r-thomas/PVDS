@@ -32,7 +32,8 @@ def intersection_gpu(Px, Py, Vi, angle, cast):
     i, j = cuda.grid(2)
     if i < Px.shape[0] and j < Py.shape[0] - 1:
         if i == j or i == j + 1:
-            pass  # Line intersecting itself
+            # Line intersecting itself
+            pass
 
         else:
             Rx = round(math.sin(angle) * cast, 10)
@@ -57,10 +58,14 @@ def intersection_gpu(Px, Py, Vi, angle, cast):
                     # The two lines are collinear and overlapping
                     Vi[i] = 1
                 else:
-                    Vi[i] = 0  # The two lines are collinear but disjoint
+                    # The two lines are collinear but disjoint
+                    # Vi[i] = 0
+                    pass
             elif (math.fabs(RxS) <= epsilon) \
                     and not (math.fabs(QPxR) <= epsilon):
-                Vi[i] = 0  # Parallel and Non-Intersecting
+                # Parallel and Non-Intersecting
+                # Vi[i] = 0
+                pass
             else:
                 t = (QPx * Sy - QPy * Sx) / RxS
                 u = (QPx * Ry - QPy * Rx) / RxS
@@ -70,7 +75,8 @@ def intersection_gpu(Px, Py, Vi, angle, cast):
                     Vi[i] = 1
                 else:
                     # The lines are not parallel but do not intersect
-                    Vi[i] = 0
+                    # Vi[i] = 0
+                    pass
 
 
 @cuda.jit('void(float64[:], float64[:], float64[:,:], float64[:,:], float64)')
