@@ -7,7 +7,7 @@ log = logging.getLogger("evapsim")
 
 
 @cuda.jit('void(float64[:], float64[:], int8[:], float64, float64)')
-def intersection_gpu(Px, Py, Vi, raycast_sin_angle, raycast_cos_angle):
+def intersection_gpu(Px, Py, Vi, angle, cast):
     """
     Core calculation code : This is sent to the Nvidia GPU
     See:
@@ -22,7 +22,11 @@ def intersection_gpu(Px, Py, Vi, raycast_sin_angle, raycast_cos_angle):
     intersection test results. 0 is no intersection, 1 is intersection
 
     :float raycast_sin_angle: rounded math.sin(angle) of deposition angle
-    :float raycast_cos_angle: rounded math.cos(angle) of deposition angle 
+    :float raycast_cos_angle: rounded math.cos(angle) of deposition angle
+    raycast_sin = round(
+            self.raycast_length * math.sin(angle), 10)
+        raycast_cos = round(
+            self.raycast_length * math.cos(angle), 10)
     """  # noqa
     epsilon = 1e-16
     i, j = cuda.grid(2)
@@ -31,14 +35,16 @@ def intersection_gpu(Px, Py, Vi, raycast_sin_angle, raycast_cos_angle):
             pass  # Line intersecting itself
 
         else:
-            Rx = raycast_sin_angle
-            Ry = raycast_cos_angle
+            Rx = round(math.sin(angle) * cast, 10)
+            Ry = round(math.cos(angle) * cast, 10)
             Sx = Px[j + 1] - Px[j]
             Sy = Py[j + 1] - Py[j]
+
             QPx = Px[j] - Px[i]
             QPy = Py[j] - Py[i]
             PQx = Px[i] - Px[j]
             PQy = Py[i] - Py[j]
+
             RxS = (Rx * Sy) - (Ry * Sx)
             QPxR = (QPx * Ry) - (QPy * Rx)
             if (math.fabs(RxS) <= epsilon) and (math.fabs(QPxR) <= epsilon):
@@ -51,20 +57,20 @@ def intersection_gpu(Px, Py, Vi, raycast_sin_angle, raycast_cos_angle):
                     # The two lines are collinear and overlapping
                     Vi[i] = 1
                 else:
-                    pass  # The two lines are collinear but disjoint
+                    Vi[i] = 0  # The two lines are collinear but disjoint
             elif (math.fabs(RxS) <= epsilon) \
                     and not (math.fabs(QPxR) <= epsilon):
-                pass  # Parallel and Non-Intersecting
+                Vi[i] = 0  # Parallel and Non-Intersecting
             else:
                 t = (QPx * Sy - QPy * Sx) / RxS
                 u = (QPx * Ry - QPy * Rx) / RxS
-                if not (RxS <= epsilon) and (0.0 <= t and t <= 1.0) and \
-                        (0.0 <= u and u <= 1.0):
+                if not (math.fabs(RxS) <= epsilon)\
+                   and (0.0 <= t and t <= 1.0) and (0.0 <= u and u <= 1.0):
                     # Intersection found = model_grid + t*r
                     Vi[i] = 1
                 else:
                     # The lines are not parallel but do not intersect
-                    pass
+                    Vi[i] = 0
 
 
 @cuda.jit('void(float64[:], float64[:], float64[:,:], float64[:,:], float64)')
@@ -215,7 +221,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
         # Get some odd growth near the ends (forcing them to be zero there)
         Vx[i, 0] = Px[i]
         Vy[i, 0] = Py[i]
-        Vi[i, 0] = Pi[i]
+        Vi[i, 0] = 1
 
     elif i < Px.shape[0] - 1 and i > 1:
         # Point is now assumed to be in evaporant
@@ -251,7 +257,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 Sy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
                 Vx[i, 0] = Sx
                 Vy[i, 0] = Sy
-                Vi[i, 0] = 1
+                Vi[i, 0] = 2
 
             elif Pi[i - 1] == 0 and Pi[i + 1] == 0:
                 # Corner in evap with either side having different evap t
@@ -304,15 +310,15 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                         i_y = p0_y + (t * Ry)
                         Vx[i, 0] = round(i_x, dec_acc)
                         Vy[i, 0] = round(i_y, dec_acc)
-                        Vi[i, 0] = s  # 0
-                        Vi[i, 1] = t
+                        Vi[i, 0] = 7 + t  # 0
+                        # Vi[i, 1] = t
                     elif s >= 0 and s <= 1.0:
                         i_x = p2_x + (s * Sx)
                         i_y = p2_y + (s * Sy)
                         Vx[i, 0] = round(i_x, dec_acc)
                         Vy[i, 0] = round(i_y, dec_acc)
-                        Vi[i, 0] = s  # 0
-                        Vi[i, 1] = t
+                        Vi[i, 0] = 8 + s  # 0
+                        # Vi[i, 1] = t
                     else:
                         # The interesction is not within reasonable bounds at
                         # the corner.
@@ -336,9 +342,22 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                             Ay = Py[i] + t * math.cos(angle)
                             Vx[i, 0] = round(Ax, dec_acc)
                             Vy[i, 0] = round(Ay, dec_acc)
-                            Vi[i, 0] = 0
-                # else:
-                #     pass  # TODO: Check real co-linear cases
+                            Vi[i, 0] = 3
+                else:
+                    Sx = Px[i + 1] - Px[i - 1]
+                    Sy = Py[i + 1] - Py[i - 1]
+                    numerator = (Rx * Sy) - (Ry * Sx)
+                    denominator = math.sqrt(
+                        Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                        * math.sqrt(Sy ** 2 + Sx ** 2)
+                    theta = math.acos(
+                        max(-1.0, min(1.0, (numerator / denominator))))
+                    t = math.fabs(math.cos(theta) * rate)
+                    Ax = Px[i] + t * math.sin(angle)
+                    Ay = Py[i] + t * math.cos(angle)
+                    Vx[i, 0] = round(Ax, dec_acc)
+                    Vy[i, 0] = round(Ay, dec_acc)
+                    Vi[i, 0] = 4
 
             elif Pi[i - 1] != 0:
                 # Shaded corner evap | Preserve the i point
@@ -354,7 +373,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 Ay = Py[i] + t * math.cos(angle)
                 Vx[i, 0] = Px[i]
                 Vy[i, 0] = Py[i]
-                Vi[i, 0] = 1
+                Vi[i, 0] = 5
                 Vx[i, 1] = round(Ax, dec_acc)
                 Vy[i, 1] = round(Ay, dec_acc)
                 Vi[i, 1] = 0
@@ -376,7 +395,7 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 Vi[i, 0] = 0
                 Vx[i, 1] = Px[i]
                 Vy[i, 1] = Py[i]
-                Vi[i, 1] = 1
+                Vi[i, 1] = 6
 
 
 @cuda.jit('void(float64[:], float64[:], float64[:], float64[:], float64)')

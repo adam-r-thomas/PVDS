@@ -359,6 +359,8 @@ class Simulator(object):
                 df = pd.read_csv(filepath, dtype=np.float64)
                 assert 'Model x (A)' in df.columns
                 assert 'Model y (A)' in df.columns
+                self.model_resolution = float(
+                    self.app.lineEdit_model_resolution.text())
 
                 self.model_ini = np.array([list(df['Model x (A)'].dropna()),
                                            list(df['Model y (A)'].dropna())])
@@ -517,14 +519,8 @@ class Simulator(object):
         bpg_y = (len(input_y) + self.tpb_2d[1]) // self.tpb_2d[1]
         bpg_2d = (bpg_x, bpg_y)
 
-        raycast_sin = round(
-            self.raycast_length * math.sin(angle), 10)
-        raycast_cos = round(
-            self.raycast_length * math.cos(angle), 10)
-
-        intersection_gpu[bpg_2d, self.tpb_2d](input_x, input_y,
-                                              output_i,
-                                              raycast_sin, raycast_cos)
+        intersection_gpu[bpg_2d, self.tpb_2d](input_x, input_y, output_i,
+                                              angle, self.raycast_length)
         return output_i
 
     def model_update_gpu(self, input_x, input_y, input_i, theta, phi=0):
@@ -564,11 +560,11 @@ class Simulator(object):
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
-        # output_i = output_i.reshape(1, xdim * ydim)
+        output_i = output_i.reshape(1, xdim * ydim)
 
         output_x = output_x[~np.isnan(output_x)]
         output_y = output_y[~np.isnan(output_y)]
-        # output_i = output_i[~np.isnan(output_i)]
+        output_i = output_i[~np.isnan(output_i)]
 
         return output_x, output_y, output_i
 
