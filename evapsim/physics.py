@@ -237,9 +237,9 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
             # average it out with nearest neighbors
             Sx = round((Px[i + 1] + Px[i - 1]) / 2.0, dec_acc)
             Sy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
-            Vx[i, 0] = Sx
-            Vy[i, 0] = Sy
-            Vi[i, 0] = 0
+            # Vx[i, 0] = Sx
+            # Vy[i, 0] = Sy
+            # Vi[i, 0] = 0
 
         else:
             Vx[i, 0] = Px[i]
@@ -278,9 +278,9 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 # averaged with its nearest neighbors
                 Sx = round((Px[i + 1] + Px[i - 1]) / 2.0, dec_acc)
                 Sy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
-                Vx[i, 0] = Sx
-                Vy[i, 0] = Sy
-                Vi[i, 0] = 1
+                # Vx[i, 0] = Sx
+                # Vy[i, 0] = Sy
+                # Vi[i, 0] = 1
 
             elif Pi[i - 1] == 0 and Pi[i + 1] == 0:
                 # Corner in evap with either side having different evap t
@@ -363,9 +363,9 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                         t = math.fabs(math.cos(theta) * rate)
                         Ax = Px[i] + t * math.sin(angle)
                         Ay = Py[i] + t * math.cos(angle)
-                        Vx[i, 0] = round(Ax, dec_acc)
-                        Vy[i, 0] = round(Ay, dec_acc)
-                        Vi[i, 0] = 0
+                        # Vx[i, 0] = round(Ax, dec_acc)
+                        # Vy[i, 0] = round(Ay, dec_acc)
+                        # Vi[i, 0] = 0
                 else:
                     Sx = Px[i + 1] - Px[i - 1]
                     Sy = Py[i + 1] - Py[i - 1]
@@ -444,10 +444,10 @@ def merge_gpu(Px, Py, Pi, Vx, Vy, gridspace):
         Vy[i] = Py[i]
 
     else:
-        Wx = Px[i + 1] - Px[i]
-        Wy = Py[i + 1] - Py[i]
+        Wx = Px[i + 1] - Px[i - 1]
+        Wy = Py[i + 1] - Py[i - 1]
         W = math.sqrt(Wx ** 2 + Wy ** 2)
-        grid_points = math.floor(W / gridspace)
+        grid_points = math.floor(W / (gridspace * 2))
         if grid_points != 0:
             # Append vertice, points are not smaller than gridspace
             Vx[i] = Px[i]
