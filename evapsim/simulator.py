@@ -232,6 +232,7 @@ class Simulator(object):
                 log.exception(tb)
                 log.error("Failure on self.calc_intersection")
                 print("Error occurred with self.calc_intersection")
+                print(tb)
                 return
 
             # Determine new vertices from the model on the grid | Adds material
@@ -254,7 +255,8 @@ class Simulator(object):
                 log.info("GPU: Model Merge")
                 self.merge_x, self.merge_y = self.model_merge(
                     self.vert_x,
-                    self.vert_y)
+                    self.vert_y,
+                    self.vert_i)
             except:  # noqa: I do not know all failure modes from GPU
                 tb = sys.exc_info()
                 log.exception(tb)
@@ -568,7 +570,7 @@ class Simulator(object):
 
         return output_x, output_y, output_i
 
-    def model_merge(self, input_x, input_y):
+    def model_merge(self, input_x, input_y, input_i):
         """
         See block comment in method merge_gpu for details.
         """
@@ -579,7 +581,7 @@ class Simulator(object):
 
         bpg = int(np.ceil(xdim / self.tpb))
 
-        merge_gpu[bpg, self.tpb](input_x, input_y,
+        merge_gpu[bpg, self.tpb](input_x, input_y, input_i,
                                  output_x, output_y,
                                  self.gridspace)
 
