@@ -457,8 +457,11 @@ def merge_gpu(Px, Py, Pi, Vx, Vy, gridspace):
             Uy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
             if Pi[i] != 0:
                 # Pin shaded point
-                Vx[i] = Px[i]
-                Vy[i] = Py[i]
+                # Vx[i] = Px[i]
+                # Vy[i] = Py[i]
+                # Testing full merge again
+                Vx[i] = Ux
+                Vy[i] = Uy
             else:
                 Vx[i] = Ux
                 Vy[i] = Uy
