@@ -99,6 +99,7 @@ class Simulator(object):
         self.tpb = device.WARP_SIZE
         self.tpb_2d = (self.tpb // 2, self.tpb // 2)
         self.tickrate = 1.0
+        self.model_limit = 10000  # Limit the maximum point size of model
 
         self.model_ini = [[], []]
         self.model_x = []
@@ -221,6 +222,12 @@ class Simulator(object):
             log.info("Cycle: %s" % angle)
             log.info("Loop: %s" % self.loop_counter)
 
+            if len(self.model_x) > self.model_limit:
+                print("Model size limit hit. Reducing model points.")
+                log.info("Model size limit hit. Reducing model points.")
+                self.model_x, self.model_y = self.model_derez(self.model_x,
+                                                              self.model_y)
+
             # Run model intersection test
             try:
                 log.info("GPU: Intersection")
@@ -233,6 +240,7 @@ class Simulator(object):
                 log.error("Failure on self.calc_intersection")
                 print("Error occurred with self.calc_intersection")
                 print(tb)
+                self.app.simPause()
                 return
 
             # Determine new vertices from the model on the grid | Adds material
@@ -248,6 +256,7 @@ class Simulator(object):
                 log.exception(tb)
                 log.error("Failure on self.model_update_gpu")
                 print("Error occurred with self.model_update_gpu")
+                self.app.simPause()
                 return
 
             # Merge vertices that are too close
@@ -262,6 +271,7 @@ class Simulator(object):
                 log.exception(tb)
                 log.error("Failure on self.model_merge")
                 print("Error occurred with self.model_merge")
+                self.app.simPause()
                 return
 
             # Re-grid the model
@@ -274,6 +284,7 @@ class Simulator(object):
                 log.exception(tb)
                 log.error("Failure on self.model_grid_gpu")
                 print("Error occurred with self.model_grid_gpu")
+                self.app.simPause()
                 return
 
             # Draw results of intersection test
@@ -589,3 +600,53 @@ class Simulator(object):
         output_y = output_y[~np.isnan(output_y)]
 
         return output_x, output_y
+
+    def model_derez(self, input_x, input_y):
+        """Takes current model x,y data and selects points at a minimum of
+        model resolution distance away from each other. This should slim down
+        the weight of the model in terms of calculations. Particularly for
+        curved surfaces that start growing.
+        """
+        xn = []
+        yn = []
+        i = 0
+        j = 0
+        while j < len(input_x):
+            if j == 0 or j == len(input_x) - 1:
+                xn.append(input_x[j])
+                yn.append(input_y[j])
+                j += 1
+            else:
+                Wx = input_x[j] - input_x[i]
+                Wy = input_y[j] - input_y[i]
+                W = math.sqrt(Wx ** 2 + Wy ** 2)
+                if W > self.model_resolution:
+                    xn.append(input_x[j])
+                    yn.append(input_y[j])
+                    i = j
+                    j += 1
+                else:
+                    j += 1
+
+        return np.array(xn), np.array(yn)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -323,10 +323,12 @@ class Application_Qt(object):
             log.info("Resuming")
             self.sim.simulation.resume()
             self.sim.paused = False
+            self.pushButton_pause.setText("Pause")
         else:
             log.info("Simulator paused")
             self.sim.simulation.pause()
             self.sim.paused = True
+            self.pushButton_pause.setText("Resume")
 
     def displayReset(self):
         self.toolbar._update_view()
