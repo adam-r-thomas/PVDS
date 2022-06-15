@@ -89,7 +89,6 @@ class Simulator(object):
     :array merge_x: = vert_x
     :array mergy_y: = vert_y
     '''
-    loop_counter = 0
 
     def __init__(self):
         '''
@@ -324,6 +323,7 @@ class Simulator(object):
         self.cycle_angle = cycle(self.avst_ini[1])
         self.elapse_time = self.avst_ini[0][-1] / (len(self.avst_ini[0]) - 1)
         self.timer = 0
+        self.loop_counter = 0
 
         self.simulation = animation.FuncAnimation(self.graph_ani,
                                                   animate,
@@ -629,24 +629,3 @@ class Simulator(object):
                     j += 1
 
         return np.array(xn), np.array(yn)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
