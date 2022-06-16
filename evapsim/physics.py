@@ -7,7 +7,7 @@ log = logging.getLogger("evapsim")
 
 
 @cuda.jit('void(float64[:], float64[:], int8[:], float64, float64)')
-def intersection_gpu(Px, Py, Vi, raycast_sin_angle, raycast_cos_angle):
+def intersection_gpu(Px, Py, Vi, angle, cast):
     """
     Core calculation code : This is sent to the Nvidia GPU
     See:
@@ -22,48 +22,61 @@ def intersection_gpu(Px, Py, Vi, raycast_sin_angle, raycast_cos_angle):
     intersection test results. 0 is no intersection, 1 is intersection
 
     :float raycast_sin_angle: rounded math.sin(angle) of deposition angle
-    :float raycast_cos_angle: rounded math.cos(angle) of deposition angle 
+    :float raycast_cos_angle: rounded math.cos(angle) of deposition angle
+    raycast_sin = round(
+            self.raycast_length * math.sin(angle), 10)
+        raycast_cos = round(
+            self.raycast_length * math.cos(angle), 10)
     """  # noqa
     epsilon = 1e-16
     i, j = cuda.grid(2)
+    dec_acc = 5
     if i < Px.shape[0] and j < Py.shape[0] - 1:
         if i == j or i == j + 1:
-            pass  # Line intersecting itself
+            # Line intersecting itself
+            pass
 
         else:
-            Rx = raycast_sin_angle
-            Ry = raycast_cos_angle
-            Sx = Px[j + 1] - Px[j]
-            Sy = Py[j + 1] - Py[j]
-            QPx = Px[j] - Px[i]
-            QPy = Py[j] - Py[i]
-            PQx = Px[i] - Px[j]
-            PQy = Py[i] - Py[j]
-            RxS = (Rx * Sy) - (Ry * Sx)
-            QPxR = (QPx * Ry) - (QPy * Rx)
+            Rx = round(math.sin(angle) * cast, dec_acc)
+            Ry = round(math.cos(angle) * cast, dec_acc)
+            Sx = round(Px[j + 1] - Px[j], dec_acc)
+            Sy = round(Py[j + 1] - Py[j], dec_acc)
+
+            QPx = round(Px[j] - Px[i], dec_acc)
+            QPy = round(Py[j] - Py[i], dec_acc)
+            PQx = round(Px[i] - Px[j], dec_acc)
+            PQy = round(Py[i] - Py[j], dec_acc)
+
+            RxS = round((Rx * Sy) - (Ry * Sx), dec_acc)
+            QPxR = round((QPx * Ry) - (QPy * Rx), dec_acc)
             if (math.fabs(RxS) <= epsilon) and (math.fabs(QPxR) <= epsilon):
                 # Collinear: Overlapping lines is considered intersecting
-                qpr = QPx * Rx + QPy * Ry
-                pqs = PQx * Sx + PQy * Sy
-                RR = Rx * Rx + Ry * Ry
-                SS = Sx * Sx + Sy * Sy
+                qpr = round(QPx * Rx + QPy * Ry, dec_acc)
+                pqs = round(PQx * Sx + PQy * Sy, dec_acc)
+                RR = round(Rx * Rx + Ry * Ry, dec_acc)
+                SS = round(Sx * Sx + Sy * Sy, dec_acc)
                 if (0 <= qpr and qpr <= RR) or (0 <= pqs and pqs <= SS):
                     # The two lines are collinear and overlapping
                     Vi[i] = 1
                 else:
-                    pass  # The two lines are collinear but disjoint
+                    # The two lines are collinear but disjoint
+                    # Vi[i] = 0
+                    pass
             elif (math.fabs(RxS) <= epsilon) \
                     and not (math.fabs(QPxR) <= epsilon):
-                pass  # Parallel and Non-Intersecting
+                # Parallel and Non-Intersecting
+                # Vi[i] = 0
+                pass
             else:
-                t = (QPx * Sy - QPy * Sx) / RxS
-                u = (QPx * Ry - QPy * Rx) / RxS
-                if not (RxS <= epsilon) and (0.0 <= t and t <= 1.0) and \
-                        (0.0 <= u and u <= 1.0):
+                t = round((QPx * Sy - QPy * Sx) / RxS, dec_acc)
+                u = round((QPx * Ry - QPy * Rx) / RxS, dec_acc)
+                if not (math.fabs(RxS) <= epsilon)\
+                   and (0.0 <= t and t <= 1.0) and (0.0 <= u and u <= 1.0):
                     # Intersection found = model_grid + t*r
                     Vi[i] = 1
                 else:
                     # The lines are not parallel but do not intersect
+                    # Vi[i] = 0
                     pass
 
 
@@ -89,7 +102,7 @@ def grid_gpu(Px, Py, Vx, Vy, model_resolution):
     '''
     epsilon = 1e-16
     i, j = cuda.grid(2)
-    dec_acc = 6  # round off floating points errors
+    dec_acc = 4  # round off floating points errors
 
     if i == Px.shape[0] - 1 and j == 0:
         # Close the shape
@@ -209,13 +222,29 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
     i = cuda.grid(1)
     dec_acc = 4  # round off floating points errors
 
-    if i == 0 or i == Px.shape[0] - 1 or Pi[i] != 0:
+    if i == 0 or i == Px.shape[0] - 1:
         # Pin start of model | Pin end of model | point in shadow - no change
         # For start/end of model - possible to preserve point and add material?
         # Get some odd growth near the ends (forcing them to be zero there)
         Vx[i, 0] = Px[i]
         Vy[i, 0] = Py[i]
-        Vi[i, 0] = Pi[i]
+        Vi[i, 0] = 1
+
+    elif Pi[i] != 0:
+        # Point in shadow
+        if Pi[i - 1] == 0 and Pi[i + 1] == 0:
+            # A divet with material landing around it. Likely none physical
+            # average it out with nearest neighbors
+            Sx = round((Px[i + 1] + Px[i - 1]) / 2.0, dec_acc)
+            Sy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
+            # Vx[i, 0] = Sx
+            # Vy[i, 0] = Sy
+            # Vi[i, 0] = 0
+
+        else:
+            Vx[i, 0] = Px[i]
+            Vy[i, 0] = Py[i]
+            Vi[i, 0] = 1
 
     elif i < Px.shape[0] - 1 and i > 1:
         # Point is now assumed to be in evaporant
@@ -249,9 +278,9 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 # averaged with its nearest neighbors
                 Sx = round((Px[i + 1] + Px[i - 1]) / 2.0, dec_acc)
                 Sy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
-                Vx[i, 0] = Sx
-                Vy[i, 0] = Sy
-                Vi[i, 0] = 1
+                # Vx[i, 0] = Sx
+                # Vy[i, 0] = Sy
+                # Vi[i, 0] = 1
 
             elif Pi[i - 1] == 0 and Pi[i + 1] == 0:
                 # Corner in evap with either side having different evap t
@@ -304,41 +333,54 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                         i_y = p0_y + (t * Ry)
                         Vx[i, 0] = round(i_x, dec_acc)
                         Vy[i, 0] = round(i_y, dec_acc)
-                        Vi[i, 0] = s  # 0
-                        Vi[i, 1] = t
+                        Vi[i, 0] = 0
+                        # Vi[i, 1] = t
                     elif s >= 0 and s <= 1.0:
                         i_x = p2_x + (s * Sx)
                         i_y = p2_y + (s * Sy)
                         Vx[i, 0] = round(i_x, dec_acc)
                         Vy[i, 0] = round(i_y, dec_acc)
-                        Vi[i, 0] = s  # 0
-                        Vi[i, 1] = t
+                        Vi[i, 0] = 0
+                        # Vi[i, 1] = t
                     else:
                         # The interesction is not within reasonable bounds at
                         # the corner.
                         # Check if co-linear If so add line like a flat evap
-                        straight = (Px[i - 1] * (Py[i] - Py[i + 1]) +
-                                    Px[i] * (Py[i + 1] - Py[i - 1]) +
-                                    Px[i + 1] * (Py[i - 1] - Py[i]))
-                        straight = round(straight, 10)
-                        if math.fabs(straight) <= epsilon:
-                            # Line segment is roughly straight
-                            Sx = Px[i + 1] - Px[i - 1]
-                            Sy = Py[i + 1] - Py[i - 1]
-                            numerator = (Rx * Sy) - (Ry * Sx)
-                            denominator = math.sqrt(
-                                Rx ** 2 + Ry ** 2 + Rz ** 2) \
-                                * math.sqrt(Sy ** 2 + Sx ** 2)
-                            theta = math.acos(
-                                max(-1.0, min(1.0, (numerator / denominator))))
-                            t = math.fabs(math.cos(theta) * rate)
-                            Ax = Px[i] + t * math.sin(angle)
-                            Ay = Py[i] + t * math.cos(angle)
-                            Vx[i, 0] = round(Ax, dec_acc)
-                            Vy[i, 0] = round(Ay, dec_acc)
-                            Vi[i, 0] = 0
-                # else:
-                #     pass  # TODO: Check real co-linear cases
+                        # straight = (Px[i - 1] * (Py[i] - Py[i + 1]) +
+                        #             Px[i] * (Py[i + 1] - Py[i - 1]) +
+                        #             Px[i + 1] * (Py[i - 1] - Py[i]))
+                        # straight = round(straight, 10)
+                        # if math.fabs(straight) <= epsilon:
+                        # Line segment is roughly straight
+                        Sx = Px[i + 1] - Px[i - 1]
+                        Sy = Py[i + 1] - Py[i - 1]
+                        numerator = (Rx * Sy) - (Ry * Sx)
+                        denominator = math.sqrt(
+                            Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                            * math.sqrt(Sy ** 2 + Sx ** 2)
+                        theta = math.acos(
+                            max(-1.0, min(1.0, (numerator / denominator))))
+                        t = math.fabs(math.cos(theta) * rate)
+                        Ax = Px[i] + t * math.sin(angle)
+                        Ay = Py[i] + t * math.cos(angle)
+                        # Vx[i, 0] = round(Ax, dec_acc)
+                        # Vy[i, 0] = round(Ay, dec_acc)
+                        # Vi[i, 0] = 0
+                else:
+                    Sx = Px[i + 1] - Px[i - 1]
+                    Sy = Py[i + 1] - Py[i - 1]
+                    numerator = (Rx * Sy) - (Ry * Sx)
+                    denominator = math.sqrt(
+                        Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                        * math.sqrt(Sy ** 2 + Sx ** 2)
+                    theta = math.acos(
+                        max(-1.0, min(1.0, (numerator / denominator))))
+                    t = math.fabs(math.cos(theta) * rate)
+                    Ax = Px[i] + t * math.sin(angle)
+                    Ay = Py[i] + t * math.cos(angle)
+                    Vx[i, 0] = round(Ax, dec_acc)
+                    Vy[i, 0] = round(Ay, dec_acc)
+                    Vi[i, 0] = 0
 
             elif Pi[i - 1] != 0:
                 # Shaded corner evap | Preserve the i point
@@ -379,8 +421,8 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 Vi[i, 1] = 1
 
 
-@cuda.jit('void(float64[:], float64[:], float64[:], float64[:], float64)')
-def merge_gpu(Px, Py, Vx, Vy, gridspace):
+@cuda.jit('void(float64[:], float64[:], float64[:], float64[:], float64[:], float64)')
+def merge_gpu(Px, Py, Pi, Vx, Vy, gridspace):
     """
     Merge points together that fall within the defined gridspace. Currently
     implemented as a simple merge function. My fancier versions produced some
@@ -389,8 +431,12 @@ def merge_gpu(Px, Py, Vx, Vy, gridspace):
     If two vertices fall within the model's resolution merge them by averaging
     their values. This leads to 'rounded' corners but greatly helps reduce
     impossible shapes from forming.
+
+    This is happening right after new material is added, thus we can lock
+    points that didn't get new material to preserve profile at corners.
     """
     i = cuda.grid(1)
+    dec_acc = 5
 
     if i == 0 or i == Px.shape[0] - 1:
         # Pin start of model | Pin end of model
@@ -398,16 +444,24 @@ def merge_gpu(Px, Py, Vx, Vy, gridspace):
         Vy[i] = Py[i]
 
     else:
-        Wx = Px[i + 1] - Px[i]
-        Wy = Py[i + 1] - Py[i]
+        Wx = Px[i + 1] - Px[i - 1]
+        Wy = Py[i + 1] - Py[i - 1]
         W = math.sqrt(Wx ** 2 + Wy ** 2)
-        grid_points = math.floor(W / gridspace)
+        grid_points = math.floor(W / (gridspace * 2))
         if grid_points != 0:
-            # Append vertice
+            # Append vertice, points are not smaller than gridspace
             Vx[i] = Px[i]
             Vy[i] = Py[i]
         else:
-            Ux = (Px[i + 1] + Px[i - 1]) / 2.0
-            Uy = (Py[i + 1] + Py[i - 1]) / 2.0
-            Vx[i] = Ux
-            Vy[i] = Uy
+            Ux = round((Px[i + 1] + Px[i - 1]) / 2.0, dec_acc)
+            Uy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
+            if Pi[i] != 0:
+                # Pin shaded point
+                # Vx[i] = Px[i]
+                # Vy[i] = Py[i]
+                # Testing full merge again
+                Vx[i] = Ux
+                Vy[i] = Uy
+            else:
+                Vx[i] = Ux
+                Vy[i] = Uy
