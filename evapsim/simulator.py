@@ -5,11 +5,13 @@ import sys
 
 from numba import cuda
 
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtWidgets import QFileDialog
 
 import matplotlib.pyplot as plt
 from matplotlib import animation
+from matplotlib.backends.backend_qt5agg import (FigureCanvasQTAgg,
+                                                NavigationToolbar2QT)
 
 import numpy as np
 import pandas as pd
@@ -25,6 +27,188 @@ log = logging.getLogger("evapsim")
 
 assert cuda.detect()
 device = cuda.get_current_device()
+
+
+class SimulatorWindow(object):
+    '''
+    '''
+
+    def __init__(self, sim, window):
+        self.Sim = sim
+        self.window = window
+        self.app = application.Ui_MainWindow()
+        self.app.setupUi(window)
+
+        self.ui_log()
+        self.ui_graphs()
+        self.ui_inputs()
+        self.ui_buttons()
+        self.ui_presets()
+
+        self.app.pushButton_Pause.setDisabled(True)
+        self.app.pushButton_Abort_Run.setDisabled(True)
+        log.info("Application window init complete")
+
+    def ui_graphs(self):
+        '''
+        '''
+        self.graph_model = FigureCanvasQTAgg(self.Sim.graph_ani)
+        self.layout_model = QtWidgets.QWidget(self.app.graphicsView_Model)
+        self.grid_model = QtWidgets.QGridLayout(self.layout_model)
+        self.grid_model.addWidget(self.graph_model)
+
+        self.graph_evap_top = FigureCanvasQTAgg(self.Sim.graph_ray1)
+        self.layout_top = QtWidgets.QWidget(
+            self.app.graphicsView_Evap_Profile_Top)
+        self.grid_top = QtWidgets.QGridLayout(self.layout_top)
+        self.grid_top.addWidget(self.graph_evap_top)
+
+        self.graph_evap_bot = FigureCanvasQTAgg(self.Sim.graph_ray2)
+        self.layout_bot = QtWidgets.QWidget(
+            self.app.graphicsView_Evap_Profile_Bottom)
+        self.grid_bot = QtWidgets.QGridLayout(self.layout_bot)
+        self.grid_bot.addWidget(self.graph_evap_bot)
+
+        self.toolbar = NavigationToolbar2QT(self.graph_model,
+                                            self.app.graphicsView_Model)
+        self.grid_model.addWidget(self.toolbar)
+
+        self.graph_model.draw_idle()
+        self.graph_evap_top.draw_idle()
+        self.graph_evap_bot.draw_idle()
+
+    def ui_log(self):
+        '''
+        '''
+        class QTextEditLogger(logging.Handler):
+            '''
+            '''
+            def __init__(self, parent):
+                super().__init__()
+                self.widget = QtWidgets.QPlainTextEdit(parent)
+                self.widget.setReadOnly(True)
+
+            def emit(self, record):
+                msg = self.format(record)
+                self.widget.appendPlainText(msg)
+
+        logTexBox = QTextEditLogger(self.window)
+        logTexBox.setFormatter(logging.Formatter('%(asctime)s %(message)s'))
+        logging.getLogger().addHandler(logTexBox)
+        logging.getLogger().setLevel(logging.DEBUG)
+
+        self.layout_log = QtWidgets.QWidget(self.app.textBrowser_Log)
+        self.layout_log.setGeometry(self.app.textBrowser_Log.geometry())
+        self.grid_log = QtWidgets.QGridLayout(self.layout_log)
+        self.grid_log.addWidget(logTexBox.widget)
+
+    def ui_inputs(self):
+        '''Setup inputs to take doubles only
+        '''
+        validator = QtGui.QDoubleValidator()
+        self.app.lineEdit_Evaporation_Rate.setValidator(validator)
+        self.app.lineEdit_Evaporation_Time.setValidator(validator)
+        self.app.lineEdit_Grid_Space.setValidator(validator)
+        self.app.lineEdit_Model_Limit.setValidator(validator)
+        self.app.lineEdit_Model_Resolution.setValidator(validator)
+        self.app.lineEdit_Raycast_Length.setValidator(validator)
+
+    def ui_buttons(self):
+        '''
+        '''
+        def dialog_clear():
+            '''
+            '''
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            ret = msg.question(self.window, "Clear All?",
+                               "Are you sure you want to clear data?",
+                               buttons=QtWidgets.QMessageBox.Yes |
+                               QtWidgets.QMessageBox.No)
+            if ret == msg.Yes:
+                self.Sim.reset()
+                self.graph_model.draw_idle()
+                self.graph_evap_top.draw_idle()
+                self.graph_evap_bot.draw_idle()
+
+        def dialog_abort():
+            '''
+            '''
+            msg = QtWidgets.QMessageBox()
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            ret = msg.question(self.window, "Abort Sim?",
+                               "Are you sure you want to abort run?",
+                               buttons=QtWidgets.QMessageBox.Yes |
+                               QtWidgets.QMessageBox.No)
+            if ret == msg.Yes:
+                self.Sim.simulation.pause()
+                self.Sim.simulation._stop()
+                self.app.pushButton_Pause.setDisabled(True)
+                self.app.pushButton_Abort_Run.setDisabled(True)
+                self.app.pushButton_Start.setDisabled(False)
+
+        def sim_start():
+            '''
+            '''
+            self.app.pushButton_Pause.setDisabled(False)
+            self.app.pushButton_Abort_Run.setDisabled(False)
+            self.app.pushButton_Start.setDisabled(True)
+            self.Sim.run()
+
+        def sim_pause():
+            '''
+            '''
+            if self.Sim.paused:
+                log.info("Resuming")
+                self.Sim.simulation.resume()
+                self.Sim.paused = False
+                self.app.pushButton_Pause.setText("Pause")
+            else:
+                log.info("Simulation paused")
+                self.Sim.simulation.pause()
+                self.Sim.paused = True
+                self.app.pushButton_Pause.setText("Resume")
+
+        def sim_reset():
+            '''
+            '''
+            self.toolbar._update_view()
+            self.toolbar.home()
+
+        def sim_quit():
+            '''
+            '''
+            log.info("Program End")
+            sys.exit(QtWidgets.QApplication(sys.argv).exit())
+
+        self.app.pushButton_Abort_Run.clicked.connect(dialog_abort)
+        self.app.pushButton_Clear_Run.clicked.connect(dialog_clear)
+        self.app.pushButton_Reset_Graph.clicked.connect(sim_reset)
+
+        self.app.pushButton_Load_Evap_Profile.clicked.connect(
+            self.Sim.load_csv_angletime)
+        self.app.pushButton_Load_Model.clicked.connect(
+            self.Sim.load_csv_model)
+        self.app.pushButton_Save_Evap_Profile.clicked.connect(
+            self.Sim.save_csv_model)
+
+        self.app.pushButton_Start.clicked.connect(sim_start)
+        self.app.pushButton_Pause.clicked.connect(sim_pause)
+        self.app.pushButton_Quit.clicked.connect(sim_quit)
+        log.info("Application UI buttons connected")
+
+    def ui_presets(self):
+        '''
+        '''
+        self.app.lineEdit_Model_Resolution.setText("10")
+        self.app.lineEdit_Grid_Space.setText("2.5")
+        self.app.lineEdit_Raycast_Length.setText("5000")
+        self.app.lineEdit_Model_Limit.setText("10000")
+
+        self.app.lineEdit_Evaporation_Rate.setText("1")
+        self.app.lineEdit_Evaporation_Time.setText("100")
+
+        self.app.progressBar.setProperty("value", 0)
 
 
 class Simulator(object):
@@ -94,37 +278,39 @@ class Simulator(object):
         '''
         Build initial parameters of the evaporation simulator
         '''
+        # Setup CUDA device
         self.device = device
         self.tpb = device.WARP_SIZE
         self.tpb_2d = (self.tpb // 2, self.tpb // 2)
         self.tickrate = 1.0
-        self.model_limit = 10000  # Limit the maximum point size of model
 
+        # Setup Graphs
         self.model_ini = [[], []]
         self.model_x = []
         self.model_y = []
         self.avst_ini = [[], [], []]
 
         self.graph_ani = plt.Figure(figsize=(6, 6), dpi=100)
-        self.ax_ani = self.graph_ani.add_subplot(111)  # , aspect='equal')
+        self.ax_ani = self.graph_ani.add_subplot(111)
 
-        self.graph_ray = plt.Figure(figsize=(6, 6), dpi=100)
-        self.ax1_ray = self.graph_ray.add_subplot(211)
-        self.ax2_ray = self.graph_ray.add_subplot(212)
+        self.graph_ray1 = plt.Figure(figsize=(6, 3), dpi=100)
+        self.ax_ray1 = self.graph_ray1.add_subplot(111)
 
+        self.graph_ray2 = plt.Figure(figsize=(6, 3), dpi=100)
+        self.ax_ray2 = self.graph_ray2.add_subplot(111)
         self.graphs()
         self.paused = False
-
         log.info("Simulator init complete.")
 
-        self.window = QtWidgets.QApplication(sys.argv)
-        self.app = application.Application_Qt(self)
+        # Start simulator window
+        self.app = QtWidgets.QApplication(sys.argv)
+        self.window = QtWidgets.QMainWindow()
         log.info("Application Window running:")
-        self.app.MainWindow.show()
-
+        self.gui = SimulatorWindow(self, self.window)
+        self.window.show()
         self.simulation_parameters()
         log.info("Simulator running:")
-        sys.exit(self.window.exec_())
+        sys.exit(self.app.exec_())
 
     def graphs(self):
         """Setup graphs Model and Raycast
@@ -147,12 +333,12 @@ class Simulator(object):
         self.graph_ani.tight_layout()
 
         # Raycast profile
-        self.ax1_ray.grid(1)
-        self.ax2_ray.grid(1)
-        self.ax1_ray.set_xlabel("Time (s)", fontsize=12)
-        self.ax2_ray.set_xlabel("Time (s)", fontsize=12)
-        self.ax1_ray.set_ylabel("Theta (rad)", fontsize=12)
-        self.ax2_ray.set_ylabel("Phi (rad)", fontsize=12)
+        self.ax_ray1.grid(1)
+        self.ax_ray2.grid(1)
+        self.ax_ray1.set_xlabel("Time (s)", fontsize=12)
+        self.ax_ray2.set_xlabel("Time (s)", fontsize=12)
+        self.ax_ray1.set_ylabel("Theta (rad)", fontsize=12)
+        self.ax_ray2.set_ylabel("Phi (rad)", fontsize=12)
 
     def reset(self):
         """
@@ -164,8 +350,8 @@ class Simulator(object):
         self.avst_ini = [[], [], []]
 
         self.ax_ani.cla()
-        self.ax1_ray.cla()
-        self.ax2_ray.cla()
+        self.ax_ray1.cla()
+        self.ax_ray2.cla()
 
         self.graphs()
 
@@ -183,9 +369,9 @@ class Simulator(object):
 
         except AssertionError:
             log.info("Model assertion error. Check model and angle parameters")
-            self.app.pushButton_pause.setDisabled(True)
-            self.app.pushButton_simAbort.setDisabled(True)
-            self.app.pushButton_start.setDisabled(False)
+            self.gui.app.pushButton_Pause.setDisabled(True)
+            self.gui.app.pushButton_Abort_Run.setDisabled(True)
+            self.gui.app.pushButton_Start.setDisabled(False)
             return
 
         def ani_init():
@@ -298,7 +484,7 @@ class Simulator(object):
                 [0, round(self.raycast_length * math.cos(angle), 10)])
 
             # Update progress to user
-            self.app.progressBar.setProperty(
+            self.gui.app.progressBar.setProperty(
                 "value", 100 * i // (self.total_fps - 1))
 
             # Remaining calculations
@@ -308,9 +494,9 @@ class Simulator(object):
 
             if i == (self.total_fps - 1):
                 # Simulation complete
-                self.app.pushButton_start.setDisabled(False)
-                self.app.pushButton_pause.setDisabled(True)
-                self.app.pushButton_simAbort.setDisabled(True)
+                self.gui.app.pushButton_Start.setDisabled(False)
+                self.gui.app.pushButton_Pause.setDisabled(True)
+                self.gui.app.pushButton_Abort_Run.setDisabled(True)
 
             return (self.line_ani,
                     self.line_angle,
@@ -332,22 +518,30 @@ class Simulator(object):
                                                   blit=False,
                                                   repeat=False)
 
-        self.app.graphcanvas.draw_idle()
-        # self.app.pushButton_start.setDisabled(False)
+        self.gui.graph_model.draw_idle()
 
     def simulation_parameters(self):
         '''
         Starting parameters of the evaporation - pulls values from the GUI
         '''
         self.model_resolution = float(
-            self.app.lineEdit_model_resolution.text())
+            self.gui.app.lineEdit_Model_Resolution.text())
 
         self.evaporation_rate = (float(
-            self.app.lineEdit_evap_rate.text()) * self.tickrate)
+            self.gui.app.lineEdit_Evaporation_Rate.text()) * self.tickrate)
 
-        self.evaporation_time = float(self.app.lineEdit_evap_time.text())
-        self.gridspace = float(self.app.lineEdit_grid_space.text())
-        self.raycast_length = float(self.app.lineEdit_raycast_length.text())
+        self.evaporation_time = float(
+            self.gui.app.lineEdit_Evaporation_Time.text())
+
+        self.gridspace = float(
+            self.gui.app.lineEdit_Grid_Space.text())
+
+        self.raycast_length = float(
+            self.gui.app.lineEdit_Raycast_Length.text())
+
+        self.model_limit = float(
+            self.gui.app.lineEdit_Model_Limit.text())
+
         log.info("Parameters loaded from GUI")
 
     def load_csv_model(self):
@@ -373,7 +567,7 @@ class Simulator(object):
                 assert 'Model x (A)' in df.columns
                 assert 'Model y (A)' in df.columns
                 self.model_resolution = float(
-                    self.app.lineEdit_model_resolution.text())
+                    self.gui.app.lineEdit_Model_Resolution.text())
 
                 self.model_ini = np.array([list(df['Model x (A)'].dropna()),
                                            list(df['Model y (A)'].dropna())])
@@ -392,7 +586,7 @@ class Simulator(object):
                 self.ax_ani.set_ylim(min(self.model_ini[1]) - ypad,
                                      max(self.model_ini[1]) + ypad)
 
-                self.app.graphcanvas.draw_idle()
+                self.gui.graph_model.draw_idle()
                 log.info("Model file loaded: %s" % filepath)
             except AssertionError:
                 log.info("Invalid file selected.")
@@ -430,12 +624,13 @@ class Simulator(object):
                 del tempa
                 del timelist
 
-                self.ax1_ray.plot(self.avst_ini[0], self.avst_ini[1],
+                self.ax_ray1.plot(self.avst_ini[0], self.avst_ini[1],
                                   label="ax1")
-                self.ax2_ray.plot(self.avst_ini[0], self.avst_ini[2],
+                self.ax_ray2.plot(self.avst_ini[0], self.avst_ini[2],
                                   label="ax2")
 
-                self.app.graphcanvas2.draw_idle()
+                self.gui.graph_evap_top.draw_idle()
+                self.gui.graph_evap_bot.draw_idle()
                 log.info("AvsT file loaded: %s" % filepath)
             except AssertionError:
                 log.info("Invalid file selected.")
