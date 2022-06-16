@@ -340,6 +340,9 @@ class Simulator(object):
         self.ax_ray1.set_ylabel("Theta (rad)", fontsize=12)
         self.ax_ray2.set_ylabel("Phi (rad)", fontsize=12)
 
+        self.graph_ray1.tight_layout()
+        self.graph_ray2.tight_layout()
+
     def reset(self):
         """
         Resets simulator to start state
@@ -624,10 +627,23 @@ class Simulator(object):
                 del tempa
                 del timelist
 
+                self.ax_ray1.cla()
+                self.ax_ray2.cla()
+
                 self.ax_ray1.plot(self.avst_ini[0], self.avst_ini[1],
                                   label="ax1")
                 self.ax_ray2.plot(self.avst_ini[0], self.avst_ini[2],
                                   label="ax2")
+
+                self.ax_ray1.grid(1)
+                self.ax_ray2.grid(1)
+                self.ax_ray1.set_xlabel("Time (s)", fontsize=12)
+                self.ax_ray2.set_xlabel("Time (s)", fontsize=12)
+                self.ax_ray1.set_ylabel("Theta (rad)", fontsize=12)
+                self.ax_ray2.set_ylabel("Phi (rad)", fontsize=12)
+
+                self.graph_ray1.tight_layout()
+                self.graph_ray2.tight_layout()
 
                 self.gui.graph_evap_top.draw_idle()
                 self.gui.graph_evap_bot.draw_idle()
