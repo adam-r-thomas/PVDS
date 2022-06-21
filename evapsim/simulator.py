@@ -428,7 +428,7 @@ class Simulator(object):
                 log.error("Failure on self.calc_intersection")
                 print("Error occurred with self.calc_intersection")
                 print(tb)
-                self.app.simPause()
+                self.gui.app.pushButton_Pause.click()
                 return
 
             # Determine new vertices from the model on the grid | Adds material
@@ -444,7 +444,7 @@ class Simulator(object):
                 log.exception(tb)
                 log.error("Failure on self.model_update_gpu")
                 print("Error occurred with self.model_update_gpu")
-                self.app.simPause()
+                self.gui.app.pushButton_Pause.click()
                 return
 
             # Merge vertices that are too close
@@ -459,7 +459,7 @@ class Simulator(object):
                 log.exception(tb)
                 log.error("Failure on self.model_merge")
                 print("Error occurred with self.model_merge")
-                self.app.simPause()
+                self.gui.app.pushButton_Pause.click()
                 return
 
             # Re-grid the model
@@ -472,7 +472,7 @@ class Simulator(object):
                 log.exception(tb)
                 log.error("Failure on self.model_grid_gpu")
                 print("Error occurred with self.model_grid_gpu")
-                self.app.simPause()
+                self.gui.app.pushButton_Pause.click()
                 return
 
             # Draw results of intersection test

@@ -277,7 +277,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Physical Vapor Depostion Simulator"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "Physical Vapor Deposition Simulator"))
         self.label_Model_Resolution.setText(_translate("MainWindow", "Model Resolution"))
         self.label_Grid_Space.setText(_translate("MainWindow", "Grid Space"))
         self.label_Evaporation_Rate.setText(_translate("MainWindow", "Evaporation Rate"))
