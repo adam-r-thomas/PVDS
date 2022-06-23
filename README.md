@@ -24,7 +24,7 @@ For the model file:
 Model x (A), Model y (A)
 ```
 
-<img src="Figures/PVDS_Savedata.png" alt="evapsim" width="200"/>
+<img src="Examples/PVDS_Savedata.png" alt="evapsim" width="200"/>
 and for raycast profile
 
 ```
