@@ -237,9 +237,9 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
             # average it out with nearest neighbors
             Sx = round((Px[i + 1] + Px[i - 1]) / 2.0, dec_acc)
             Sy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
-            # Vx[i, 0] = Sx
-            # Vy[i, 0] = Sy
-            # Vi[i, 0] = 0
+            Vx[i, 0] = Sx
+            Vy[i, 0] = Sy
+            Vi[i, 0] = 0
 
         else:
             Vx[i, 0] = Px[i]
@@ -276,11 +276,12 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 # A divet or sharp point that has evaporation on it but not
                 # its nearest neighbors. Considered to be non-real and is
                 # averaged with its nearest neighbors
-                Sx = round((Px[i + 1] + Px[i - 1]) / 2.0, dec_acc)
-                Sy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
+                # Sx = round((Px[i + 1] + Px[i - 1]) / 2.0, dec_acc)
+                # Sy = round((Py[i + 1] + Py[i - 1]) / 2.0, dec_acc)
                 # Vx[i, 0] = Sx
                 # Vy[i, 0] = Sy
                 # Vi[i, 0] = 1
+                pass
 
             elif Pi[i - 1] == 0 and Pi[i + 1] == 0:
                 # Corner in evap with either side having different evap t
@@ -352,37 +353,39 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                         # straight = round(straight, 10)
                         # if math.fabs(straight) <= epsilon:
                         # Line segment is roughly straight
-                        Sx = Px[i + 1] - Px[i - 1]
-                        Sy = Py[i + 1] - Py[i - 1]
-                        numerator = (Rx * Sy) - (Ry * Sx)
-                        denominator = math.sqrt(
-                            Rx ** 2 + Ry ** 2 + Rz ** 2) \
-                            * math.sqrt(Sy ** 2 + Sx ** 2)
-                        theta = math.acos(
-                            max(-1.0, min(1.0, (numerator / denominator))))
-                        t = math.fabs(math.cos(theta) * rate)
-                        Ax = Px[i] + t * math.sin(angle)
-                        Ay = Py[i] + t * math.cos(angle)
+                        # Sx = Px[i + 1] - Px[i - 1]
+                        # Sy = Py[i + 1] - Py[i - 1]
+                        # numerator = (Rx * Sy) - (Ry * Sx)
+                        # denominator = math.sqrt(
+                        #     Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                        #     * math.sqrt(Sy ** 2 + Sx ** 2)
+                        # theta = math.acos(
+                        #     max(-1.0, min(1.0, (numerator / denominator))))
+                        # t = math.fabs(math.cos(theta) * rate)
+                        # Ax = Px[i] + t * math.sin(angle)
+                        # Ay = Py[i] + t * math.cos(angle)
                         # Vx[i, 0] = round(Ax, dec_acc)
                         # Vy[i, 0] = round(Ay, dec_acc)
                         # Vi[i, 0] = 0
+                        pass
                 else:
-                    Sx = Px[i + 1] - Px[i - 1]
-                    Sy = Py[i + 1] - Py[i - 1]
-                    numerator = (Rx * Sy) - (Ry * Sx)
-                    denominator = math.sqrt(
-                        Rx ** 2 + Ry ** 2 + Rz ** 2) \
-                        * math.sqrt(Sy ** 2 + Sx ** 2)
-                    theta = math.acos(
-                        max(-1.0, min(1.0, (numerator / denominator))))
-                    t = math.fabs(math.cos(theta) * rate)
-                    Ax = Px[i] + t * math.sin(angle)
-                    Ay = Py[i] + t * math.cos(angle)
-                    Vx[i, 0] = round(Ax, dec_acc)
-                    Vy[i, 0] = round(Ay, dec_acc)
-                    Vi[i, 0] = 0
+                    # Sx = Px[i + 1] - Px[i - 1]
+                    # Sy = Py[i + 1] - Py[i - 1]
+                    # numerator = (Rx * Sy) - (Ry * Sx)
+                    # denominator = math.sqrt(
+                    #     Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                    #     * math.sqrt(Sy ** 2 + Sx ** 2)
+                    # theta = math.acos(
+                    #     max(-1.0, min(1.0, (numerator / denominator))))
+                    # t = math.fabs(math.cos(theta) * rate)
+                    # Ax = Px[i] + t * math.sin(angle)
+                    # Ay = Py[i] + t * math.cos(angle)
+                    # Vx[i, 0] = round(Ax, dec_acc)
+                    # Vy[i, 0] = round(Ay, dec_acc)
+                    # Vi[i, 0] = 0
+                    pass
 
-            elif Pi[i - 1] != 0:
+            elif Pi[i - 1] != 0 and Pi[i + 1] == 0:
                 # Shaded corner evap | Preserve the i point
                 Sx = Px[i + 1] - Px[i]
                 Sy = Py[i + 1] - Py[i]
@@ -394,14 +397,14 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 t = math.fabs(math.cos(theta) * rate)
                 Ax = Px[i] + t * math.sin(angle)
                 Ay = Py[i] + t * math.cos(angle)
-                Vx[i, 0] = Px[i]
-                Vy[i, 0] = Py[i]
-                Vi[i, 0] = 1
-                Vx[i, 1] = round(Ax, dec_acc)
-                Vy[i, 1] = round(Ay, dec_acc)
-                Vi[i, 1] = 0
+                # Vx[i, 0] = Px[i]
+                # Vy[i, 0] = Py[i]
+                # Vi[i, 0] = 1
+                Vx[i, 0] = round(Ax, dec_acc)
+                Vy[i, 0] = round(Ay, dec_acc)
+                Vi[i, 0] = 0
 
-            elif Pi[i + 1] != 0:
+            elif Pi[i + 1] != 0 and Pi[i - 1] == 0:
                 # Shaded corner evap | Preserve the i point
                 Sx = Px[i] - Px[i - 1]
                 Sy = Py[i] - Py[i - 1]
@@ -416,9 +419,9 @@ def model_gpu(Px, Py, Pi, angle, Rx, Ry, Rz, rate, Vx, Vy, Vi):
                 Vx[i, 0] = round(Ax, dec_acc)
                 Vy[i, 0] = round(Ay, dec_acc)
                 Vi[i, 0] = 0
-                Vx[i, 1] = Px[i]
-                Vy[i, 1] = Py[i]
-                Vi[i, 1] = 1
+                # Vx[i, 1] = Px[i]
+                # Vy[i, 1] = Py[i]
+                # Vi[i, 1] = 1
 
 
 @cuda.jit('void(float64[:], float64[:], float64[:], float64[:], float64[:], float64)')

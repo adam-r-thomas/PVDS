@@ -811,6 +811,7 @@ class Simulator(object):
         output_y = output_y[~np.isnan(output_y)]
 
         return output_x, output_y
+        # return input_x, input_y
 
     def model_derez(self, input_x, input_y):
         """Takes current model x,y data and selects points at a minimum of
