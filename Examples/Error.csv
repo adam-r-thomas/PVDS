@@ -1,0 +1,2 @@
+Model x (A),Model y (A),Evap x (A),Evap y (A),Time (sec),Theta (deg),Phi (deg),Model Resolution (A),Evaporation Rate (A/sec),Evaporation Time (sec),Grid space (A),Raycast Length (A)
+,,,,,,,100.0,5.0,1.0,1.0,100000.0
