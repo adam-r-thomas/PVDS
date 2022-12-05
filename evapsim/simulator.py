@@ -105,13 +105,23 @@ class SimulatorWindow(object):
     def ui_inputs(self):
         '''Setup inputs to take doubles only
         '''
-        validator = QtGui.QDoubleValidator()
-        self.app.lineEdit_Evaporation_Rate.setValidator(validator)
-        self.app.lineEdit_Evaporation_Time.setValidator(validator)
-        self.app.lineEdit_Grid_Space.setValidator(validator)
-        self.app.lineEdit_Model_Limit.setValidator(validator)
-        self.app.lineEdit_Model_Resolution.setValidator(validator)
-        self.app.lineEdit_Raycast_Length.setValidator(validator)
+        double = QtGui.QDoubleValidator()
+        self.app.lineEdit_Evaporation_Rate.setValidator(double)
+        self.app.lineEdit_Evaporation_Time.setValidator(double)
+        self.app.lineEdit_Grid_Space.setValidator(double)
+        self.app.lineEdit_Model_Limit.setValidator(double)
+        self.app.lineEdit_Model_Resolution.setValidator(double)
+        self.app.lineEdit_Raycast_Length.setValidator(double)
+        self.app.lineEdit_epsGrid.setValidator(double)
+        self.app.lineEdit_epsIntersect.setValidator(double)
+        self.app.lineEdit_epsMerge.setValidator(double)
+        self.app.lineEdit_epsModel.setValidator(double)
+
+        integer = QtGui.QIntValidator()
+        self.app.lineEdit_decGrid.setValidator(integer)
+        self.app.lineEdit_decIntersect.setValidator(integer)
+        self.app.lineEdit_decMerge.setValidator(integer)
+        self.app.lineEdit_decModel.setValidator(integer)
 
     def ui_buttons(self):
         '''
@@ -411,10 +421,11 @@ class Simulator(object):
             log.info("Loop: %s" % self.loop_counter)
 
             if len(self.model_x) > self.model_limit:
-                print("Model size limit hit. Reducing model points.")
-                log.info("Model size limit hit. Reducing model points.")
-                self.model_x, self.model_y = self.model_derez(self.model_x,
-                                                              self.model_y)
+                if self.boolModelRes:
+                    print("Model size limit hit. Reducing model points.")
+                    log.info("Model size limit hit. Reducing model points.")
+                    self.model_x, self.model_y = self.model_derez(self.model_x,
+                                                                  self.model_y)
 
             # Run model intersection test
             try:
@@ -449,11 +460,15 @@ class Simulator(object):
 
             # Merge vertices that are too close
             try:
-                log.info("GPU: Model Merge")
-                self.merge_x, self.merge_y = self.model_merge(
-                    self.vert_x,
-                    self.vert_y,
-                    self.vert_i)
+                if self.grid:
+                    log.info("GPU: Model Merge")
+                    self.merge_x, self.merge_y = self.model_merge(
+                        self.vert_x,
+                        self.vert_y,
+                        self.vert_i)
+                else:
+                    self.merge_x = self.vert_x
+                    self.merge_y = self.vert_y
             except:  # noqa: I do not know all failure modes from GPU
                 tb = sys.exc_info()
                 log.exception(tb)
@@ -544,6 +559,45 @@ class Simulator(object):
 
         self.model_limit = float(
             self.gui.app.lineEdit_Model_Limit.text())
+
+        self.average_divets = bool(
+            self.gui.app.checkBox_divet.checkState())
+
+        self.average_peaks = bool(
+            self.gui.app.checkBox_peaks.checkState())
+
+        self.corner = bool(
+            self.gui.app.checkBox_corners.checkState())
+
+        self.grid = bool(
+            self.gui.app.checkBox_grid.checkState())
+
+        self.boolModelRes = bool(
+            self.gui.app.checkBox_modelRes.checkState())
+
+        self.epsIntersect = float(
+            self.gui.app.lineEdit_epsIntersect.text())
+
+        self.epsGrid = float(
+            self.gui.app.lineEdit_epsGrid.text())
+
+        self.epsModel = float(
+            self.gui.app.lineEdit_epsModel.text())
+
+        self.epsMerge = float(
+            self.gui.app.lineEdit_epsMerge.text())
+
+        self.decIntersect = int(
+            self.gui.app.lineEdit_decIntersect.text())
+
+        self.decGrid = int(
+            self.gui.app.lineEdit_decGrid.text())
+
+        self.decModel = int(
+            self.gui.app.lineEdit_decModel.text())
+
+        self.decMerge = int(
+            self.gui.app.lineEdit_decMerge.text())
 
         log.info("Parameters loaded from GUI")
 
@@ -715,9 +769,10 @@ class Simulator(object):
         bpg_y = (output_x.shape[1] + self.tpb_2d[1]) // self.tpb_2d[1]
         bpg_2d = (bpg_x, bpg_y)
 
-        grid_gpu[bpg_2d, self.tpb_2d](input_x, input_y,
-                                      output_x, output_y,
-                                      self.model_resolution)
+        grid_gpu[bpg_2d, self.tpb_2d](
+            input_x, input_y,
+            output_x, output_y, self.model_resolution,
+            self.epsGrid, self.decGrid)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
@@ -743,8 +798,10 @@ class Simulator(object):
         bpg_y = (len(input_y) + self.tpb_2d[1]) // self.tpb_2d[1]
         bpg_2d = (bpg_x, bpg_y)
 
-        intersection_gpu[bpg_2d, self.tpb_2d](input_x, input_y, output_i,
-                                              angle, self.raycast_length)
+        intersection_gpu[bpg_2d, self.tpb_2d](
+            input_x, input_y, output_i,
+            angle, self.raycast_length,
+            self.epsIntersect, self.decIntersect)
         return output_i
 
     def model_update_gpu(self, input_x, input_y, input_i, theta, phi=0):
@@ -778,9 +835,12 @@ class Simulator(object):
 
         bpg = int(np.ceil(xdim / self.tpb))
 
-        model_gpu[bpg, self.tpb](input_x, input_y, input_i,
-                                 theta, Rx, Ry, Rz, rate,
-                                 output_x, output_y, output_i)
+        model_gpu[bpg, self.tpb](
+            input_x, input_y, input_i,
+            theta, Rx, Ry, Rz, rate,
+            output_x, output_y, output_i,
+            self.average_divets, self.average_peaks, self.corner,
+            self.epsModel, self.decModel)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
@@ -803,9 +863,10 @@ class Simulator(object):
 
         bpg = int(np.ceil(xdim / self.tpb))
 
-        merge_gpu[bpg, self.tpb](input_x, input_y, input_i,
-                                 output_x, output_y,
-                                 self.gridspace)
+        merge_gpu[bpg, self.tpb](
+            input_x, input_y, input_i,
+            output_x, output_y, self.gridspace,
+            self.epsMerge, self.decMerge)
 
         output_x = output_x[~np.isnan(output_x)]
         output_y = output_y[~np.isnan(output_y)]
