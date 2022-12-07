@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'Evap-Sim-005.ui'
+# Form implementation generated from reading ui file 'Evap-Sim-006.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.7
 #
@@ -236,58 +236,34 @@ class Ui_MainWindow(object):
         self.tabWidget_Main.addTab(self.tab_3, "")
         self.tab = QtWidgets.QWidget()
         self.tab.setObjectName("tab")
-        self.textBrowser_InfoGPU = QtWidgets.QTextBrowser(self.tab)
-        self.textBrowser_InfoGPU.setGeometry(QtCore.QRect(10, 10, 641, 181))
-        self.textBrowser_InfoGPU.setStatusTip("")
-        self.textBrowser_InfoGPU.setWhatsThis("")
-        self.textBrowser_InfoGPU.setAccessibleName("")
-        self.textBrowser_InfoGPU.setAccessibleDescription("")
-        self.textBrowser_InfoGPU.setDocumentTitle("")
-        self.textBrowser_InfoGPU.setHtml("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-                                         "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-                                         "p, li { white-space: pre-wrap; }\n"
-                                         "</style></head><body style=\" font-family:\'Sans Serif\'; font-size:12pt; font-weight:400; font-style:normal;\">\n"
-                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Peak: </span><span style=\" font-style:italic;\">if Pi[i - 1] != 0 and Pi[i] == 0 and Pi[i + 1] != 0:</span></p>\n"
-                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">    The ith point is averaged against its neighbors.</p>\n"
-                                         "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Divet: </span><span style=\" font-style:italic;\">if Pi[i - 1] == 0 and Pi[i] != 0 and Pi[i + 1] == 0:</span></p>\n"
-                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">    The ith point is averaged against its neighbors.</p>\n"
-                                         "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Corners: </span><span style=\" font-style:italic;\">Pi[i - 1] != 0 and Pi[i + 1] == 0: </span><span style=\" font-weight:600; font-style:italic;\">or</span></p>\n"
-                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-style:italic;\">    Pi[i + 1] != 0 and Pi[i - 1] == 0:</span></p>\n"
-                                         "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-style:italic;\">    </span>The ith point is kept along with the adjusted ith point</p></body></html>")
-        self.textBrowser_InfoGPU.setPlaceholderText("")
-        self.textBrowser_InfoGPU.setObjectName("textBrowser_InfoGPU")
         self.label_GPU_Corrections = QtWidgets.QLabel(self.tab)
-        self.label_GPU_Corrections.setGeometry(QtCore.QRect(20, 200, 141, 16))
+        self.label_GPU_Corrections.setGeometry(QtCore.QRect(10, 10, 141, 16))
         self.label_GPU_Corrections.setObjectName("label_GPU_Corrections")
         self.label_CPU_Corrections = QtWidgets.QLabel(self.tab)
-        self.label_CPU_Corrections.setGeometry(QtCore.QRect(10, 320, 141, 16))
+        self.label_CPU_Corrections.setGeometry(QtCore.QRect(10, 70, 141, 16))
         self.label_CPU_Corrections.setObjectName("label_CPU_Corrections")
-        self.textBrowser_InfoCPU = QtWidgets.QTextBrowser(self.tab)
-        self.textBrowser_InfoCPU.setGeometry(QtCore.QRect(10, 260, 641, 51))
-        self.textBrowser_InfoCPU.setObjectName("textBrowser_InfoCPU")
         self.checkBox_divet = QtWidgets.QCheckBox(self.tab)
-        self.checkBox_divet.setGeometry(QtCore.QRect(170, 200, 171, 21))
+        self.checkBox_divet.setGeometry(QtCore.QRect(160, 10, 171, 21))
         self.checkBox_divet.setChecked(True)
         self.checkBox_divet.setObjectName("checkBox_divet")
         self.checkBox_peaks = QtWidgets.QCheckBox(self.tab)
-        self.checkBox_peaks.setGeometry(QtCore.QRect(170, 230, 171, 21))
+        self.checkBox_peaks.setGeometry(QtCore.QRect(160, 40, 171, 21))
+        self.checkBox_peaks.setChecked(True)
         self.checkBox_peaks.setObjectName("checkBox_peaks")
         self.checkBox_modelRes = QtWidgets.QCheckBox(self.tab)
-        self.checkBox_modelRes.setGeometry(QtCore.QRect(160, 320, 221, 21))
+        self.checkBox_modelRes.setGeometry(QtCore.QRect(160, 70, 221, 21))
         self.checkBox_modelRes.setChecked(True)
         self.checkBox_modelRes.setObjectName("checkBox_modelRes")
         self.checkBox_corners = QtWidgets.QCheckBox(self.tab)
-        self.checkBox_corners.setGeometry(QtCore.QRect(370, 230, 161, 21))
+        self.checkBox_corners.setGeometry(QtCore.QRect(360, 40, 161, 21))
         self.checkBox_corners.setChecked(True)
         self.checkBox_corners.setObjectName("checkBox_corners")
         self.checkBox_grid = QtWidgets.QCheckBox(self.tab)
-        self.checkBox_grid.setGeometry(QtCore.QRect(370, 200, 171, 21))
+        self.checkBox_grid.setGeometry(QtCore.QRect(360, 10, 171, 21))
         self.checkBox_grid.setChecked(True)
         self.checkBox_grid.setObjectName("checkBox_grid")
         self.gridLayoutWidget_2 = QtWidgets.QWidget(self.tab)
-        self.gridLayoutWidget_2.setGeometry(QtCore.QRect(80, 360, 491, 153))
+        self.gridLayoutWidget_2.setGeometry(QtCore.QRect(10, 110, 491, 153))
         self.gridLayoutWidget_2.setObjectName("gridLayoutWidget_2")
         self.gridLayout_GPUfunc = QtWidgets.QGridLayout(
             self.gridLayoutWidget_2)
@@ -343,22 +319,6 @@ class Ui_MainWindow(object):
         self.label_GPUTolerance.setObjectName("label_GPUTolerance")
         self.gridLayout_GPUfunc.addWidget(self.label_GPUTolerance, 0, 0, 1, 1)
         self.tabWidget_Main.addTab(self.tab, "")
-        self.verticalLayoutWidget_3 = QtWidgets.QWidget(self.centralwidget)
-        self.verticalLayoutWidget_3.setGeometry(
-            QtCore.QRect(10, 310, 341, 451))
-        self.verticalLayoutWidget_3.setObjectName("verticalLayoutWidget_3")
-        self.verticalLayout_3 = QtWidgets.QVBoxLayout(
-            self.verticalLayoutWidget_3)
-        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout_3.setObjectName("verticalLayout_3")
-        self.textBrowser_Info = QtWidgets.QTextBrowser(
-            self.verticalLayoutWidget_3)
-        font = QtGui.QFont()
-        font.setFamily("Sans Serif")
-        font.setPointSize(12)
-        self.textBrowser_Info.setFont(font)
-        self.textBrowser_Info.setObjectName("textBrowser_Info")
-        self.verticalLayout_3.addWidget(self.textBrowser_Info)
         self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
         self.progressBar.setGeometry(QtCore.QRect(360, 710, 231, 41))
         self.progressBar.setProperty("value", 24)
@@ -403,6 +363,9 @@ class Ui_MainWindow(object):
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
+        self.actionHelp = QtWidgets.QAction(MainWindow)
+        self.actionHelp.setObjectName("actionHelp")
+        self.menuMenu.addAction(self.actionHelp)
         self.menubar.addAction(self.menuMenu.menuAction())
 
         self.retranslateUi(MainWindow)
@@ -439,7 +402,6 @@ class Ui_MainWindow(object):
             self.graphicsView_Evap_Profile_Top, self.graphicsView_Evap_Profile_Bottom)
         MainWindow.setTabOrder(
             self.graphicsView_Evap_Profile_Bottom, self.textBrowser_Log)
-        MainWindow.setTabOrder(self.textBrowser_Log, self.textBrowser_Info)
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -484,21 +446,16 @@ class Ui_MainWindow(object):
             _translate("MainWindow", "GPU Corrections:"))
         self.label_CPU_Corrections.setText(
             _translate("MainWindow", "CPU Corrections:"))
-        self.textBrowser_InfoCPU.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-                                                    "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-                                                    "p, li { white-space: pre-wrap; }\n"
-                                                    "</style></head><body style=\" font-family:\'Sans Serif\'; font-size:12pt; font-weight:400; font-style:normal;\">\n"
-                                                    "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Model Resolution: </span>The distance between points is checked. If a point is less than the minimum distance allowed it is dropped from the model.</p></body></html>"))
         self.checkBox_divet.setText(_translate(
             "MainWindow", "Average out divets"))
         self.checkBox_peaks.setText(_translate(
             "MainWindow", "Average out peaks"))
-        self.checkBox_modelRes.setText(_translate(
-            "MainWindow", "Enforce Model Resolution"))
+        self.checkBox_modelRes.setText(
+            _translate("MainWindow", "Enforce Model Limit"))
         self.checkBox_corners.setText(
             _translate("MainWindow", "Preserve corners"))
         self.checkBox_grid.setText(_translate(
-            "MainWindow", "Enfore Grid Space"))
+            "MainWindow", "Enforce Grid Space"))
         self.label_epsGrid.setText(_translate("MainWindow", "Grid"))
         self.lineEdit_decGrid.setText(_translate("MainWindow", "10"))
         self.lineEdit_epsGrid.setText(_translate("MainWindow", "1e-16"))
@@ -519,21 +476,48 @@ class Ui_MainWindow(object):
         self.label_GPUTolerance.setText(_translate("MainWindow", "GPU func:"))
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(
             self.tab), _translate("MainWindow", "Settings"))
-        self.textBrowser_Info.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-                                                 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-                                                 "p, li { white-space: pre-wrap; }\n"
-                                                 "</style></head><body style=\" font-family:\'Sans Serif\'; font-size:12pt; font-weight:400; font-style:normal;\">\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Model Resolution: </span>Density of the raycasts on the model.</p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Evaporation Rate: </span>Material deposition rate</p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Grid Space:</span> Vertice resolution. Model attempts to merge points within a distance smaller than this. Helps reduce artifacts from forming.</p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Raycast Length: </span>Size of ray extended from each point in model. Too large a ray can produce floating point errors. Too small can miss intesections against model.</p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-weight:600;\">Model Limit: </span>Maximum amount of points allowed in model. When this is hit the model is reduced to set model resolution.</p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Helpful for decluttering curves with thousands of points.</p></body></html>"))
         self.pushButton_Start.setText(_translate("MainWindow", "Start"))
         self.pushButton_Pause.setText(_translate("MainWindow", "Pause"))
         self.pushButton_Quit.setText(_translate("MainWindow", "Quit"))
         self.menuMenu.setTitle(_translate("MainWindow", "Menu"))
+        self.actionHelp.setText(_translate("MainWindow", "Help"))
+
+
+class Ui_Dialog_Help(object):
+    def setupUi(self, Dialog_Help):
+        Dialog_Help.setObjectName("Dialog_Help")
+        Dialog_Help.resize(679, 579)
+        self.textBrowser_Help = QtWidgets.QTextBrowser(Dialog_Help)
+        self.textBrowser_Help.setGeometry(QtCore.QRect(10, 10, 661, 561))
+        self.textBrowser_Help.setObjectName("textBrowser_Help")
+
+        self.retranslateUi(Dialog_Help)
+        QtCore.QMetaObject.connectSlotsByName(Dialog_Help)
+
+    def retranslateUi(self, Dialog_Help):
+        _translate = QtCore.QCoreApplication.translate
+        Dialog_Help.setWindowTitle(_translate("Dialog_Help", "Dialog"))
+        self.textBrowser_Help.setHtml(_translate("Dialog_Help", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+                                                 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+                                                 "p, li { white-space: pre-wrap; }\n"
+                                                 "</style></head><body style=\" font-family:\'Sans Serif\'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Model Resolution: </span><span style=\" font-size:12pt;\">Density of the raycasts on the model.</span></p>\n"
+                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Evaporation Rate: </span><span style=\" font-size:12pt;\">Material deposition rate</span></p>\n"
+                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Grid Space:</span><span style=\" font-size:12pt;\"> Vertice resolution. Model attempts to merge points within a distance smaller than this. Helps reduce artifacts from forming.</span></p>\n"
+                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Raycast Length: </span><span style=\" font-size:12pt;\">Size of ray extended from each point in model. Too large a ray can produce floating point errors. Too small can miss intesections against model.</span></p>\n"
+                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Model Limit: </span><span style=\" font-size:12pt;\">Maximum amount of points allowed in model. When this is hit the model is reduced to set model resolution.</span></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\">Helpful for decluttering curves with thousands of points.</span></p>\n"
+                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Peak: </span><span style=\" font-size:12pt; font-style:italic;\">if Pi[i - 1] != 0 and Pi[i] == 0 and Pi[i + 1] != 0:</span></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\">    The ith point is averaged against its neighbors.</span></p>\n"
+                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Divet: </span><span style=\" font-size:12pt; font-style:italic;\">if Pi[i - 1] == 0 and Pi[i] != 0 and Pi[i + 1] == 0:</span></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\">    The ith point is averaged against its neighbors.</span></p>\n"
+                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Corners: </span><span style=\" font-size:12pt; font-style:italic;\">Pi[i - 1] != 0 and Pi[i + 1] == 0: </span><span style=\" font-size:12pt; font-weight:600; font-style:italic;\">or</span></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-style:italic;\">    Pi[i + 1] != 0 and Pi[i - 1] == 0:</span></p>\n"
+                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-style:italic;\">    </span><span style=\" font-size:12pt;\">The ith point is kept along with the adjusted ith point</span></p></body></html>"))

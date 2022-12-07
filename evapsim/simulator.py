@@ -29,6 +29,15 @@ assert cuda.detect()
 device = cuda.get_current_device()
 
 
+class HelpDialog(QtWidgets.QDialog):
+    '''Creates pop up window for help info
+    '''
+    def __init__(self):
+        super().__init__()
+        self.ui_help = application.Ui_Dialog_Help()
+        self.ui_help.setupUi(self)
+
+
 class SimulatorWindow(object):
     '''
     '''
@@ -38,6 +47,9 @@ class SimulatorWindow(object):
         self.window = window
         self.app = application.Ui_MainWindow()
         self.app.setupUi(window)
+
+        self.help = HelpDialog()
+        self.help.hide()
 
         self.ui_log()
         self.ui_graphs()
@@ -205,6 +217,8 @@ class SimulatorWindow(object):
         self.app.pushButton_Start.clicked.connect(sim_start)
         self.app.pushButton_Pause.clicked.connect(sim_pause)
         self.app.pushButton_Quit.clicked.connect(sim_quit)
+
+        self.app.actionHelp.triggered.connect(self.help.show)
         log.info("Application UI buttons connected")
 
     def ui_presets(self):
@@ -416,6 +430,7 @@ class Simulator(object):
             self.time_text.set_text('Time: %.2f' % self.timer)
             self.timer += self.elapse_time
             angle = next(self.cycle_angle)
+            phi = next(self.cycle_phi)
             self.angle_text.set_text('Angle: %.3f' % angle)
             log.info("Cycle: %s" % angle)
             log.info("Loop: %s" % self.loop_counter)
@@ -449,7 +464,7 @@ class Simulator(object):
                     self.model_x,
                     self.model_y,
                     self.intersect_result,
-                    angle)
+                    angle, phi)
             except:  # noqa: I do not know all failure modes from GPU
                 tb = sys.exc_info()
                 log.exception(tb)
@@ -525,6 +540,7 @@ class Simulator(object):
         fps = (len(self.avst_ini[0]) - 1) / self.avst_ini[0][-1]
         self.total_fps = int(fps * self.evaporation_time)
         self.cycle_angle = cycle(self.avst_ini[1])
+        self.cycle_phi = cycle(self.avst_ini[2])
         self.elapse_time = self.avst_ini[0][-1] / (len(self.avst_ini[0]) - 1)
         self.timer = 0
         self.loop_counter = 0
@@ -655,7 +671,7 @@ class Simulator(object):
         Returns:
         :param tickrate: the average time step between each angle
         :array avst_ini: the angle vs time as a 2D numpy array.
-            Angle = 0, Time = 1
+            Angle = 1:2, Time = 1
         '''
         filepath, _ = QFileDialog.getOpenFileName(
             caption="Evaporation Simulator - Load angle vs time file",
@@ -669,9 +685,12 @@ class Simulator(object):
                 assert 'Theta (deg)' in df.columns
                 assert 'Phi (deg)' in df.columns
 
-                theta_deg = [math.radians(x) for x in list(df['Theta (deg)'].dropna())]  # noqa
-                phi_deg = [math.radians(x) for x in list(df['Phi (deg)'].dropna())]  # noqa
-                self.avst_ini = np.array([list(df['Time (sec)'].dropna()), theta_deg, phi_deg])  # noqa
+                theta_deg = [
+                    math.radians(x) for x in list(df['Theta (deg)'].dropna())]
+                phi_deg = [
+                    math.radians(x) for x in list(df['Phi (deg)'].dropna())]
+                self.avst_ini = np.array(
+                    [list(df['Time (sec)'].dropna()), theta_deg, phi_deg])
 
                 tempa = []
                 timelist = list(df['Time (sec)'].dropna())
@@ -804,7 +823,7 @@ class Simulator(object):
             self.epsIntersect, self.decIntersect)
         return output_i
 
-    def model_update_gpu(self, input_x, input_y, input_i, theta, phi=0):
+    def model_update_gpu(self, input_x, input_y, input_i, theta, phi):
         """
         Take intersection data and model, add material to model according to
         the evaporation rate
