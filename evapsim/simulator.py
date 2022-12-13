@@ -213,6 +213,8 @@ class SimulatorWindow(object):
             self.Sim.load_csv_model)
         self.app.pushButton_Save_Evap_Profile.clicked.connect(
             self.Sim.save_csv_model)
+        self.app.pushButton_load_settings.clicked.connect(
+            self.Sim.load_csv_settings)
 
         self.app.pushButton_Start.clicked.connect(sim_start)
         self.app.pushButton_Pause.clicked.connect(sim_pause)
@@ -561,6 +563,9 @@ class Simulator(object):
         self.model_resolution = float(
             self.gui.app.lineEdit_Model_Resolution.text())
 
+        self.evap_rate_text = float(
+            self.gui.app.lineEdit_Evaporation_Rate.text())
+
         self.evaporation_rate = (float(
             self.gui.app.lineEdit_Evaporation_Rate.text()) * self.tickrate)
 
@@ -596,6 +601,9 @@ class Simulator(object):
 
         self.epsGrid = float(
             self.gui.app.lineEdit_epsGrid.text())
+
+        self.epsModeltArea = float(
+            self.gui.app.lineEdit_epsModeltArea.text())
 
         self.epsModel = float(
             self.gui.app.lineEdit_epsModel.text())
@@ -636,9 +644,8 @@ class Simulator(object):
             filepath = Path(filepath)
             try:
                 assert '.csv' in filepath.suffix
-                df = pd.read_csv(filepath, dtype=np.float64)
-                assert 'Model x (A)' in df.columns
-                assert 'Model y (A)' in df.columns
+                df = pd.read_csv(filepath, dtype=np.float64,
+                                 usecols=['Model x (A)', 'Model y (A)'])
                 self.model_resolution = float(
                     self.gui.app.lineEdit_Model_Resolution.text())
 
@@ -661,7 +668,7 @@ class Simulator(object):
 
                 self.gui.graph_model.draw_idle()
                 log.info("Model file loaded: %s" % filepath)
-            except AssertionError:
+            except AssertionError or ValueError:
                 log.info("Invalid file selected.")
 
     def load_csv_angletime(self):
@@ -680,10 +687,10 @@ class Simulator(object):
             try:
                 filepath = Path(filepath)
                 assert '.csv' in filepath.suffix
-                df = pd.read_csv(filepath, dtype=np.float64)
-                assert 'Time (sec)' in df.columns
-                assert 'Theta (deg)' in df.columns
-                assert 'Phi (deg)' in df.columns
+                df = pd.read_csv(filepath, dtype=np.float64,
+                                 usecols=['Time (sec)',
+                                          'Theta (deg)',
+                                          'Phi (deg)'])
 
                 theta_deg = [
                     math.radians(x) for x in list(df['Theta (deg)'].dropna())]
@@ -721,7 +728,45 @@ class Simulator(object):
                 self.gui.graph_evap_top.draw_idle()
                 self.gui.graph_evap_bot.draw_idle()
                 log.info("AvsT file loaded: %s" % filepath)
-            except AssertionError:
+            except AssertionError or ValueError:
+                log.info("Invalid file selected.")
+
+    def load_csv_settings(self):
+        filepath, _ = QFileDialog.getOpenFileName(
+            caption="Evaporation Simulator - Load settings file",
+            filter="*.csv")
+        if filepath:
+            try:
+                filepath = Path(filepath)
+                assert '.csv' in filepath.suffix
+                df = pd.read_csv(filepath,
+                                 usecols=['Settings Name', 'Settings Val'])
+
+                svals = df['Settings Val'].dropna()
+
+                self.gui.app.lineEdit_Model_Resolution.setText(str(svals[0]))
+                self.gui.app.lineEdit_Evaporation_Rate.setText(str(svals[1]))
+                self.gui.app.lineEdit_Evaporation_Time.setText(str(svals[2]))
+                self.gui.app.lineEdit_Grid_Space.setText(str(svals[3]))
+                self.gui.app.lineEdit_Raycast_Length.setText(str(svals[4]))
+                self.gui.app.lineEdit_Model_Limit.setText(str(svals[5]))
+                self.gui.app.checkBox_divet.setChecked(svals[6])
+                self.gui.app.checkBox_peaks.setChecked(svals[7])
+                self.gui.app.checkBox_corners.setChecked(svals[8])
+                self.gui.app.checkBox_grid.setChecked(svals[9])
+                self.gui.app.checkBox_modelRes.setChecked(svals[10])
+                self.gui.app.lineEdit_epsIntersect.setText(str(svals[11]))
+                self.gui.app.lineEdit_epsGrid.setText(str(svals[12]))
+                self.gui.app.lineEdit_epsModel.setText(str(svals[13]))
+                self.gui.app.lineEdit_epsModeltArea.setText(str(svals[14]))
+                self.gui.app.lineEdit_epsMerge.setText(str(svals[15]))
+                self.gui.app.lineEdit_decIntersect.setText(str(svals[16]))
+                self.gui.app.lineEdit_decGrid.setText(str(svals[17]))
+                self.gui.app.lineEdit_decModel.setText(str(svals[18]))
+                self.gui.app.lineEdit_decMerge.setText(str(svals[19]))
+
+                log.info("Settings file loaded: %s" % filepath)
+            except AssertionError or ValueError:
                 log.info("Invalid file selected.")
 
     def save_csv_model(self):
@@ -747,12 +792,46 @@ class Simulator(object):
             df3['Phi (deg)'] = [math.degrees(x) for x in self.avst_ini[2]]
 
             df4 = pd.DataFrame()
-            df4['Model Resolution (A)'] = [self.model_resolution]
-            df4['Evaporation Rate (A/sec)'] = [self.evaporation_rate
-                                               / self.tickrate]
-            df4['Evaporation Time (sec)'] = [self.evaporation_time]
-            df4['Grid space (A)'] = [self.gridspace]
-            df4['Raycast Length (A)'] = [self.raycast_length]
+            df4['Settings Name'] = ['Model Resolution (A)',
+                                    'Evaporation Rate (A/sec)',
+                                    'Evaporation Time (sec)',
+                                    'Grid space (A)',
+                                    'Raycast Length (A)',
+                                    'Model Limit (Pts)',
+                                    'Average out divets',
+                                    'Average out peaks',
+                                    'Preserve corners',
+                                    'Enforce Grid Space',
+                                    'Enforce Model Limit',
+                                    'GPU 0 Intersection',
+                                    'GPU 0 Grid',
+                                    'GPU 0 Model',
+                                    'GPU 0 tArea',
+                                    'GPU 0 Merge',
+                                    'GPU D Intersection',
+                                    'GPU D Grid',
+                                    'GPU D Model',
+                                    'GPU D Merge']
+            df4['Settings Val'] = [self.model_resolution,
+                                   self.evap_rate_text,
+                                   self.evaporation_time,
+                                   self.gridspace,
+                                   self.raycast_length,
+                                   self.model_limit,
+                                   self.gui.app.checkBox_divet.checkState(),
+                                   self.gui.app.checkBox_peaks.checkState(),
+                                   self.gui.app.checkBox_corners.checkState(),
+                                   self.gui.app.checkBox_grid.checkState(),
+                                   self.gui.app.checkBox_modelRes.checkState(),
+                                   self.epsIntersect,
+                                   self.epsGrid,
+                                   self.epsModel,
+                                   self.epsModeltArea,
+                                   self.epsMerge,
+                                   self.decIntersect,
+                                   self.decGrid,
+                                   self.decModel,
+                                   self.decMerge]
 
             df = pd.concat([df1, df2, df3, df4], axis=1)
             df.to_csv(filepath, index=False)
@@ -859,7 +938,7 @@ class Simulator(object):
             theta, Rx, Ry, Rz, rate,
             output_x, output_y, output_i,
             self.average_divets, self.average_peaks, self.corner,
-            self.epsModel, self.decModel)
+            self.epsModel, self.epsModeltArea, self.decModel)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
