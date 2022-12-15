@@ -128,6 +128,7 @@ class SimulatorWindow(object):
         self.app.lineEdit_epsIntersect.setValidator(double)
         self.app.lineEdit_epsMerge.setValidator(double)
         self.app.lineEdit_epsModel.setValidator(double)
+        self.app.lineEdit_epsModeltArea.setValidator(double)
 
         integer = QtGui.QIntValidator()
         self.app.lineEdit_decGrid.setValidator(integer)
@@ -750,20 +751,23 @@ class Simulator(object):
                 self.gui.app.lineEdit_Grid_Space.setText(str(svals[3]))
                 self.gui.app.lineEdit_Raycast_Length.setText(str(svals[4]))
                 self.gui.app.lineEdit_Model_Limit.setText(str(svals[5]))
+
                 self.gui.app.checkBox_divet.setChecked(svals[6])
                 self.gui.app.checkBox_peaks.setChecked(svals[7])
                 self.gui.app.checkBox_corners.setChecked(svals[8])
                 self.gui.app.checkBox_grid.setChecked(svals[9])
                 self.gui.app.checkBox_modelRes.setChecked(svals[10])
+
                 self.gui.app.lineEdit_epsIntersect.setText(str(svals[11]))
                 self.gui.app.lineEdit_epsGrid.setText(str(svals[12]))
                 self.gui.app.lineEdit_epsModel.setText(str(svals[13]))
                 self.gui.app.lineEdit_epsModeltArea.setText(str(svals[14]))
                 self.gui.app.lineEdit_epsMerge.setText(str(svals[15]))
-                self.gui.app.lineEdit_decIntersect.setText(str(svals[16]))
-                self.gui.app.lineEdit_decGrid.setText(str(svals[17]))
-                self.gui.app.lineEdit_decModel.setText(str(svals[18]))
-                self.gui.app.lineEdit_decMerge.setText(str(svals[19]))
+
+                self.gui.app.lineEdit_decIntersect.setText(str(int(svals[16])))
+                self.gui.app.lineEdit_decGrid.setText(str(int(svals[17])))
+                self.gui.app.lineEdit_decModel.setText(str(int(svals[18])))
+                self.gui.app.lineEdit_decMerge.setText(str(int(svals[19])))
 
                 log.info("Settings file loaded: %s" % filepath)
             except AssertionError or ValueError:
