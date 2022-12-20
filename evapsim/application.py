@@ -334,6 +334,69 @@ class Ui_MainWindow(object):
         self.label_GPUtArea = QtWidgets.QLabel(self.gridLayoutWidget_2)
         self.label_GPUtArea.setObjectName("label_GPUtArea")
         self.gridLayout_GPUfunc.addWidget(self.label_GPUtArea, 5, 0, 1, 1)
+        self.frame_growth_direction = QtWidgets.QFrame(self.tab)
+        self.frame_growth_direction.setGeometry(QtCore.QRect(10, 330, 641, 61))
+        self.frame_growth_direction.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.frame_growth_direction.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame_growth_direction.setObjectName("frame_growth_direction")
+        self.label_growth_direction = QtWidgets.QLabel(
+            self.frame_growth_direction)
+        self.label_growth_direction.setGeometry(QtCore.QRect(10, 10, 141, 16))
+        self.label_growth_direction.setObjectName("label_growth_direction")
+        self.horizontalLayoutWidget_2 = QtWidgets.QWidget(
+            self.frame_growth_direction)
+        self.horizontalLayoutWidget_2.setGeometry(
+            QtCore.QRect(10, 30, 621, 27))
+        self.horizontalLayoutWidget_2.setObjectName("horizontalLayoutWidget_2")
+        self.horizontalLayout_growth_direction = QtWidgets.QHBoxLayout(
+            self.horizontalLayoutWidget_2)
+        self.horizontalLayout_growth_direction.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_growth_direction.setObjectName(
+            "horizontalLayout_growth_direction")
+        self.radioButton_linearrule = QtWidgets.QRadioButton(
+            self.horizontalLayoutWidget_2)
+        self.radioButton_linearrule.setChecked(True)
+        self.radioButton_linearrule.setObjectName("radioButton_linearrule")
+        self.horizontalLayout_growth_direction.addWidget(
+            self.radioButton_linearrule)
+        self.radioButton_cosinerule = QtWidgets.QRadioButton(
+            self.horizontalLayoutWidget_2)
+        self.radioButton_cosinerule.setChecked(False)
+        self.radioButton_cosinerule.setObjectName("radioButton_cosinerule")
+        self.horizontalLayout_growth_direction.addWidget(
+            self.radioButton_cosinerule)
+        self.radioButton_tangentrule = QtWidgets.QRadioButton(
+            self.horizontalLayoutWidget_2)
+        self.radioButton_tangentrule.setObjectName("radioButton_tangentrule")
+        self.horizontalLayout_growth_direction.addWidget(
+            self.radioButton_tangentrule)
+        self.frame_growth_rate = QtWidgets.QFrame(self.tab)
+        self.frame_growth_rate.setGeometry(QtCore.QRect(10, 400, 301, 61))
+        self.frame_growth_rate.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        self.frame_growth_rate.setFrameShadow(QtWidgets.QFrame.Raised)
+        self.frame_growth_rate.setObjectName("frame_growth_rate")
+        self.label_growth_rate = QtWidgets.QLabel(self.frame_growth_rate)
+        self.label_growth_rate.setGeometry(QtCore.QRect(10, 10, 101, 16))
+        self.label_growth_rate.setObjectName("label_growth_rate")
+        self.horizontalLayoutWidget_3 = QtWidgets.QWidget(
+            self.frame_growth_rate)
+        self.horizontalLayoutWidget_3.setGeometry(QtCore.QRect(9, 30, 281, 31))
+        self.horizontalLayoutWidget_3.setObjectName("horizontalLayoutWidget_3")
+        self.horizontalLayout_growth_rate = QtWidgets.QHBoxLayout(
+            self.horizontalLayoutWidget_3)
+        self.horizontalLayout_growth_rate.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_growth_rate.setObjectName(
+            "horizontalLayout_growth_rate")
+        self.label_direction_depend = QtWidgets.QLabel(
+            self.horizontalLayoutWidget_3)
+        self.label_direction_depend.setObjectName("label_direction_depend")
+        self.horizontalLayout_growth_rate.addWidget(
+            self.label_direction_depend)
+        self.lineEdit_growth_rate_Xi = QtWidgets.QLineEdit(
+            self.horizontalLayoutWidget_3)
+        self.lineEdit_growth_rate_Xi.setObjectName("lineEdit_growth_rate_Xi")
+        self.horizontalLayout_growth_rate.addWidget(
+            self.lineEdit_growth_rate_Xi)
         self.tabWidget_Main.addTab(self.tab, "")
         self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
         self.progressBar.setGeometry(QtCore.QRect(360, 710, 231, 41))
@@ -494,6 +557,17 @@ class Ui_MainWindow(object):
         self.label_GPUTolerance.setText(_translate("MainWindow", "GPU func:"))
         self.lineEdit_epsModeltArea.setText(_translate("MainWindow", "1e-10"))
         self.label_GPUtArea.setText(_translate("MainWindow", "Model tArea"))
+        self.label_growth_direction.setText(
+            _translate("MainWindow", "Growth Direction"))
+        self.radioButton_linearrule.setText(_translate("MainWindow", "Linear"))
+        self.radioButton_cosinerule.setText(
+            _translate("MainWindow", "Cosine Rule"))
+        self.radioButton_tangentrule.setText(
+            _translate("MainWindow", "Tangent Rule"))
+        self.label_growth_rate.setText(_translate("MainWindow", "Growth Rate"))
+        self.label_direction_depend.setText(
+            _translate("MainWindow", "Directional Dependence"))
+        self.lineEdit_growth_rate_Xi.setText(_translate("MainWindow", "0"))
         self.tabWidget_Main.setTabText(self.tabWidget_Main.indexOf(
             self.tab), _translate("MainWindow", "Settings"))
         self.pushButton_Start.setText(_translate("MainWindow", "Start"))
@@ -503,41 +577,131 @@ class Ui_MainWindow(object):
         self.actionHelp.setText(_translate("MainWindow", "Help"))
 
 
-class Ui_Dialog_Help(object):
-    def setupUi(self, Dialog_Help):
-        Dialog_Help.setObjectName("Dialog_Help")
-        Dialog_Help.resize(679, 579)
-        self.textBrowser_Help = QtWidgets.QTextBrowser(Dialog_Help)
-        self.textBrowser_Help.setGeometry(QtCore.QRect(10, 10, 661, 561))
-        self.textBrowser_Help.setObjectName("textBrowser_Help")
+class Ui_Dialog_HelpTree(object):
+    def setupUi(self, Dialog_HelpTree):
+        Dialog_HelpTree.setObjectName("Dialog_HelpTree")
+        Dialog_HelpTree.resize(733, 461)
+        self.treeWidget_Help = QtWidgets.QTreeWidget(Dialog_HelpTree)
+        self.treeWidget_Help.setGeometry(QtCore.QRect(10, 10, 711, 441))
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(10)
+        sizePolicy.setVerticalStretch(10)
+        sizePolicy.setHeightForWidth(
+            self.treeWidget_Help.sizePolicy().hasHeightForWidth())
+        self.treeWidget_Help.setSizePolicy(sizePolicy)
+        self.treeWidget_Help.setTabKeyNavigation(True)
+        self.treeWidget_Help.setAlternatingRowColors(False)
+        self.treeWidget_Help.setAnimated(True)
+        self.treeWidget_Help.setAllColumnsShowFocus(False)
+        self.treeWidget_Help.setWordWrap(True)
+        self.treeWidget_Help.setObjectName("treeWidget_Help")
+        item_0 = QtWidgets.QTreeWidgetItem(self.treeWidget_Help)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_2 = QtWidgets.QTreeWidgetItem(item_1)
+        item_2 = QtWidgets.QTreeWidgetItem(item_1)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_0 = QtWidgets.QTreeWidgetItem(self.treeWidget_Help)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_0 = QtWidgets.QTreeWidgetItem(self.treeWidget_Help)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
+        item_0 = QtWidgets.QTreeWidgetItem(self.treeWidget_Help)
+        item_1 = QtWidgets.QTreeWidgetItem(item_0)
 
-        self.retranslateUi(Dialog_Help)
-        QtCore.QMetaObject.connectSlotsByName(Dialog_Help)
+        self.retranslateUi(Dialog_HelpTree)
+        QtCore.QMetaObject.connectSlotsByName(Dialog_HelpTree)
 
-    def retranslateUi(self, Dialog_Help):
+    def retranslateUi(self, Dialog_HelpTree):
         _translate = QtCore.QCoreApplication.translate
-        Dialog_Help.setWindowTitle(_translate("Dialog_Help", "Dialog"))
-        self.textBrowser_Help.setHtml(_translate("Dialog_Help", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-                                                 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-                                                 "p, li { white-space: pre-wrap; }\n"
-                                                 "</style></head><body style=\" font-family:\'Sans Serif\'; font-size:9pt; font-weight:400; font-style:normal;\">\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Model Resolution: </span><span style=\" font-size:12pt;\">Density of the raycasts on the model.</span></p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Evaporation Rate: </span><span style=\" font-size:12pt;\">Material deposition rate</span></p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Grid Space:</span><span style=\" font-size:12pt;\"> Vertice resolution. Model attempts to merge points within a distance smaller than this. Helps reduce artifacts from forming.</span></p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Raycast Length: </span><span style=\" font-size:12pt;\">Size of ray extended from each point in model. Too large a ray can produce floating point errors. Too small can miss intesections against model.</span></p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Model Limit: </span><span style=\" font-size:12pt;\">Maximum amount of points allowed in model. When this is hit the model is reduced to set model resolution.</span></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\">Helpful for decluttering curves with thousands of points.</span></p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Peak: </span><span style=\" font-size:12pt; font-style:italic;\">if Pi[i - 1] != 0 and Pi[i] == 0 and Pi[i + 1] != 0:</span></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\">    The ith point is averaged against its neighbors.</span></p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Divet: </span><span style=\" font-size:12pt; font-style:italic;\">if Pi[i - 1] == 0 and Pi[i] != 0 and Pi[i + 1] == 0:</span></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\">    The ith point is averaged against its neighbors.</span></p>\n"
-                                                 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;\"><br /></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-weight:600;\">Corners: </span><span style=\" font-size:12pt; font-style:italic;\">Pi[i - 1] != 0 and Pi[i + 1] == 0: </span><span style=\" font-size:12pt; font-weight:600; font-style:italic;\">or</span></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-style:italic;\">    Pi[i + 1] != 0 and Pi[i - 1] == 0:</span></p>\n"
-                                                 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt; font-style:italic;\">    </span><span style=\" font-size:12pt;\">The ith point is kept along with the adjusted ith point</span></p></body></html>"))
+        Dialog_HelpTree.setWindowTitle(_translate("Dialog_HelpTree", "Dialog"))
+        self.treeWidget_Help.setSortingEnabled(False)
+        self.treeWidget_Help.headerItem().setText(
+            0, _translate("Dialog_HelpTree", "Contents"))
+        self.treeWidget_Help.headerItem().setText(
+            1, _translate("Dialog_HelpTree", "Description"))
+        __sortingEnabled = self.treeWidget_Help.isSortingEnabled()
+        self.treeWidget_Help.setSortingEnabled(False)
+        self.treeWidget_Help.topLevelItem(0).setText(
+            0, _translate("Dialog_HelpTree", "Ray Cast Method"))
+        self.treeWidget_Help.topLevelItem(0).setText(1, _translate("Dialog_HelpTree", "The model is treated as a series of vertices. Each vertice has a ray casted from it to\n"
+                                                                   "determine potential intersections. The results of this intersection test determine\n"
+                                                                   "shadowing and material growth."))
+        self.treeWidget_Help.topLevelItem(0).child(0).setText(
+            0, _translate("Dialog_HelpTree", "Corner Handling"))
+        self.treeWidget_Help.topLevelItem(0).child(0).setText(1, _translate("Dialog_HelpTree", "Pi[i - 1] != 0 and Pi[i + 1] == 0 or Pi[i + 1] != 0 and Pi[i - 1] == 0:\n"
+                                                                            "The ith point may be kept along with the adjusted ith point"))
+        self.treeWidget_Help.topLevelItem(0).child(1).setText(
+            0, _translate("Dialog_HelpTree", "Defect Handling"))
+        self.treeWidget_Help.topLevelItem(0).child(1).setText(1, _translate(
+            "Dialog_HelpTree", "RC solution doesn\'t exist. Either average or drop the point."))
+        self.treeWidget_Help.topLevelItem(0).child(1).child(
+            0).setText(0, _translate("Dialog_HelpTree", "Peaks"))
+        self.treeWidget_Help.topLevelItem(0).child(1).child(0).setText(1, _translate("Dialog_HelpTree", " if Pi[i - 1] != 0 and Pi[i] == 0 and Pi[i + 1] != 0:\n"
+                                                                                     "The ith point is averaged against its neighbors."))
+        self.treeWidget_Help.topLevelItem(0).child(1).child(
+            1).setText(0, _translate("Dialog_HelpTree", "Divets"))
+        self.treeWidget_Help.topLevelItem(0).child(1).child(1).setText(1, _translate("Dialog_HelpTree", "if Pi[i - 1] == 0 and Pi[i] != 0 and Pi[i + 1] == 0:\n"
+                                                                                     "The ith point is averaged against its neighbors."))
+        self.treeWidget_Help.topLevelItem(0).child(2).setText(
+            0, _translate("Dialog_HelpTree", "Evaporation Rate"))
+        self.treeWidget_Help.topLevelItem(0).child(2).setText(1, _translate(
+            "Dialog_HelpTree", "Crystal thickness monitor adjusted evaporation rate"))
+        self.treeWidget_Help.topLevelItem(0).child(3).setText(
+            0, _translate("Dialog_HelpTree", "Evaporation Time"))
+        self.treeWidget_Help.topLevelItem(0).child(3).setText(1, _translate(
+            "Dialog_HelpTree", "Total length of evaporation in seconds"))
+        self.treeWidget_Help.topLevelItem(0).child(4).setText(
+            0, _translate("Dialog_HelpTree", "Grid Space"))
+        self.treeWidget_Help.topLevelItem(0).child(4).setText(1, _translate("Dialog_HelpTree", "Vertice resolution. Model attempts to merge points within a distance smaller than this.\n"
+                                                                            "Helps reduce artifacts from forming."))
+        self.treeWidget_Help.topLevelItem(0).child(5).setText(
+            0, _translate("Dialog_HelpTree", "Model Limit"))
+        self.treeWidget_Help.topLevelItem(0).child(5).setText(1, _translate("Dialog_HelpTree", "Maximum amount of vertices allowed before applying a reduce function to\n"
+                                                                            "cut down on the number of vertices in the model."))
+        self.treeWidget_Help.topLevelItem(0).child(6).setText(
+            0, _translate("Dialog_HelpTree", "Model Resolution"))
+        self.treeWidget_Help.topLevelItem(0).child(6).setText(1, _translate(
+            "Dialog_HelpTree", "Initial spacing of vertices when model is loaded into memory."))
+        self.treeWidget_Help.topLevelItem(0).child(7).setText(
+            0, _translate("Dialog_HelpTree", "Raycast Length"))
+        self.treeWidget_Help.topLevelItem(0).child(7).setText(1, _translate("Dialog_HelpTree", "Length of the casted ray per vertice. May be adjusted down to only check shadowing of\n"
+                                                                            "nearest neighbors."))
+        self.treeWidget_Help.topLevelItem(1).setText(
+            0, _translate("Dialog_HelpTree", "Growth Rate"))
+        self.treeWidget_Help.topLevelItem(1).setText(1, _translate("Dialog_HelpTree", "Φ = Evaporation flux\n"
+                                                                   "Ξ = Directional dependence"))
+        self.treeWidget_Help.topLevelItem(1).child(0).setText(
+            0, _translate("Dialog_HelpTree", "Cosine Rule"))
+        self.treeWidget_Help.topLevelItem(1).child(0).setText(
+            1, _translate("Dialog_HelpTree", "rate = Φ * exp(Ξ) * cos(α)"))
+        self.treeWidget_Help.topLevelItem(2).setText(
+            0, _translate("Dialog_HelpTree", "Growth Direction"))
+        self.treeWidget_Help.topLevelItem(2).setText(1, _translate("Dialog_HelpTree", "α = Evaporation angle with respect to surface normal\n"
+                                                                   "β = Growth direction with respect to surface normal"))
+        self.treeWidget_Help.topLevelItem(2).child(0).setText(
+            0, _translate("Dialog_HelpTree", "Linear"))
+        self.treeWidget_Help.topLevelItem(2).child(0).setText(
+            1, _translate("Dialog_HelpTree", "β = α"))
+        self.treeWidget_Help.topLevelItem(2).child(1).setText(
+            0, _translate("Dialog_HelpTree", "Cosine Rule"))
+        self.treeWidget_Help.topLevelItem(2).child(1).setText(
+            1, _translate("Dialog_HelpTree", "β = α - arcsin((1 - cos(α)) / 2)"))
+        self.treeWidget_Help.topLevelItem(2).child(2).setText(
+            0, _translate("Dialog_HelpTree", "Tangent Rule"))
+        self.treeWidget_Help.topLevelItem(2).child(2).setText(
+            1, _translate("Dialog_HelpTree", "β = arctan(tan(α) / 2)  "))
+        self.treeWidget_Help.topLevelItem(3).setText(
+            0, _translate("Dialog_HelpTree", "Ballistic Method"))
+        self.treeWidget_Help.topLevelItem(3).child(0).setText(
+            0, _translate("Dialog_HelpTree", "Not Implemented"))
+        self.treeWidget_Help.topLevelItem(3).child(0).setText(1, _translate(
+            "Dialog_HelpTree", "To be ray march of ballistic method in GPU"))
+        self.treeWidget_Help.setSortingEnabled(__sortingEnabled)

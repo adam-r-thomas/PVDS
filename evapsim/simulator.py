@@ -34,7 +34,7 @@ class HelpDialog(QtWidgets.QDialog):
     '''
     def __init__(self):
         super().__init__()
-        self.ui_help = application.Ui_Dialog_Help()
+        self.ui_help = application.Ui_Dialog_HelpTree()
         self.ui_help.setupUi(self)
 
 
@@ -129,6 +129,7 @@ class SimulatorWindow(object):
         self.app.lineEdit_epsMerge.setValidator(double)
         self.app.lineEdit_epsModel.setValidator(double)
         self.app.lineEdit_epsModeltArea.setValidator(double)
+        self.app.lineEdit_growth_rate_Xi.setValidator(double)
 
         integer = QtGui.QIntValidator()
         self.app.lineEdit_decGrid.setValidator(integer)
@@ -624,6 +625,16 @@ class Simulator(object):
         self.decMerge = int(
             self.gui.app.lineEdit_decMerge.text())
 
+        self.growthXi = float(
+            self.gui.app.lineEdit_growth_rate_Xi.text())
+
+        if self.gui.app.radioButton_linearrule.isChecked():
+            self.growthDirection: 'linear' = 0
+        if self.gui.app.radioButton_cosinerule.isChecked():
+            self.growthDirection: 'cosine' = 1
+        if self.gui.app.radioButton_tangentrule.isChecked():
+            self.growthDirection: 'tangent' = 2
+
         log.info("Parameters loaded from GUI")
 
     def load_csv_model(self):
@@ -770,7 +781,7 @@ class Simulator(object):
                 self.gui.app.lineEdit_decMerge.setText(str(int(svals[19])))
 
                 log.info("Settings file loaded: %s" % filepath)
-            except AssertionError or ValueError:
+            except AssertionError or ValueError:  # TODO: verify this works
                 log.info("Invalid file selected.")
 
     def save_csv_model(self):
@@ -942,7 +953,8 @@ class Simulator(object):
             theta, Rx, Ry, Rz, rate,
             output_x, output_y, output_i,
             self.average_divets, self.average_peaks, self.corner,
-            self.epsModel, self.epsModeltArea, self.decModel)
+            self.epsModel, self.epsModeltArea, self.decModel,
+            self.growthXi, self.growthDirection)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
