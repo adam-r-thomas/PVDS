@@ -752,36 +752,66 @@ class Simulator(object):
                 filepath = Path(filepath)
                 assert '.csv' in filepath.suffix
                 df = pd.read_csv(filepath,
-                                 usecols=['Settings Name', 'Settings Val'])
+                                 usecols=['Settings Name', 'Settings Val'],
+                                 index_col=0)
 
-                svals = df['Settings Val'].dropna()
+                self.gui.app.lineEdit_Model_Resolution.setText(
+                    str(df.loc['Model Resolution (A)']))
+                self.gui.app.lineEdit_Evaporation_Rate.setText(
+                    str(df.loc['Evaporation Rate (A/sec)']))
+                self.gui.app.lineEdit_Evaporation_Time.setText(
+                    str(df.loc['Evaporation Time (sec)']))
+                self.gui.app.lineEdit_Grid_Space.setText(
+                    str(df.loc['Grid space (A)']))
+                self.gui.app.lineEdit_Raycast_Length.setText(
+                    str(df.loc['Raycast Length (A)']))
+                self.gui.app.lineEdit_Model_Limit.setText(
+                    str(df.loc['Model Limit (Pts)']))
 
-                self.gui.app.lineEdit_Model_Resolution.setText(str(svals[0]))
-                self.gui.app.lineEdit_Evaporation_Rate.setText(str(svals[1]))
-                self.gui.app.lineEdit_Evaporation_Time.setText(str(svals[2]))
-                self.gui.app.lineEdit_Grid_Space.setText(str(svals[3]))
-                self.gui.app.lineEdit_Raycast_Length.setText(str(svals[4]))
-                self.gui.app.lineEdit_Model_Limit.setText(str(svals[5]))
+                self.gui.app.checkBox_divet.setChecked(
+                    df.loc['Average out divets'])
+                self.gui.app.checkBox_peaks.setChecked(
+                    df.loc['Average out peaks'])
+                self.gui.app.checkBox_corners.setChecked(
+                    df.loc['Preserve corners'])
+                self.gui.app.checkBox_grid.setChecked(
+                    df.loc['Enforce Grid Space'])
+                self.gui.app.checkBox_modelRes.setChecked(
+                    df.loc['Enforce Model Limit'])
 
-                self.gui.app.checkBox_divet.setChecked(svals[6])
-                self.gui.app.checkBox_peaks.setChecked(svals[7])
-                self.gui.app.checkBox_corners.setChecked(svals[8])
-                self.gui.app.checkBox_grid.setChecked(svals[9])
-                self.gui.app.checkBox_modelRes.setChecked(svals[10])
+                self.gui.app.lineEdit_epsIntersect.setText(
+                    str(df.loc['GPU 0 Intersection']))
+                self.gui.app.lineEdit_epsGrid.setText(
+                    str(df.loc['GPU 0 Grid']))
+                self.gui.app.lineEdit_epsModel.setText(
+                    str(df.loc['GPU 0 Model']))
+                self.gui.app.lineEdit_epsModeltArea.setText(
+                    str(df.loc['GPU 0 tArea']))
+                self.gui.app.lineEdit_epsMerge.setText(
+                    str(df.loc['GPU 0 Merge']))
 
-                self.gui.app.lineEdit_epsIntersect.setText(str(svals[11]))
-                self.gui.app.lineEdit_epsGrid.setText(str(svals[12]))
-                self.gui.app.lineEdit_epsModel.setText(str(svals[13]))
-                self.gui.app.lineEdit_epsModeltArea.setText(str(svals[14]))
-                self.gui.app.lineEdit_epsMerge.setText(str(svals[15]))
+                self.gui.app.lineEdit_decIntersect.setText(
+                    str(int(df.loc['GPU D Intersection'])))
+                self.gui.app.lineEdit_decGrid.setText(
+                    str(int(df.loc['GPU D Grid'])))
+                self.gui.app.lineEdit_decModel.setText(
+                    str(int(df.loc['GPU D Model'])))
+                self.gui.app.lineEdit_decMerge.setText(
+                    str(int(df.loc['GPU D Merge'])))
 
-                self.gui.app.lineEdit_decIntersect.setText(str(int(svals[16])))
-                self.gui.app.lineEdit_decGrid.setText(str(int(svals[17])))
-                self.gui.app.lineEdit_decModel.setText(str(int(svals[18])))
-                self.gui.app.lineEdit_decMerge.setText(str(int(svals[19])))
+                self.gui.app.lineEdit_growth_rate_Xi.setText(
+                    str(df.loc['Directional Dependence']))
+
+                self.growthDirection = int(df.loc['Growth Type'])
+                if self.growthDirection == 1:
+                    self.gui.app.radioButton_cosinerule.setChecked(True)
+                elif self.growthDirection == 2:
+                    self.gui.app.radioButton_tangentrule.setChecked(True)
+                else:
+                    self.gui.app.radioButton_linearrule.setChecked(True)
 
                 log.info("Settings file loaded: %s" % filepath)
-            except AssertionError or ValueError:  # TODO: verify this works
+            except (AssertionError, ValueError, KeyError) as _error:
                 log.info("Invalid file selected.")
 
     def save_csv_model(self):
@@ -826,7 +856,10 @@ class Simulator(object):
                                     'GPU D Intersection',
                                     'GPU D Grid',
                                     'GPU D Model',
-                                    'GPU D Merge']
+                                    'GPU D Merge',
+                                    'Directional Dependence',
+                                    'Growth Type']
+
             df4['Settings Val'] = [self.model_resolution,
                                    self.evap_rate_text,
                                    self.evaporation_time,
@@ -846,7 +879,9 @@ class Simulator(object):
                                    self.decIntersect,
                                    self.decGrid,
                                    self.decModel,
-                                   self.decMerge]
+                                   self.decMerge,
+                                   self.growthXi,
+                                   self.growthDirection]
 
             df = pd.concat([df1, df2, df3, df4], axis=1)
             df.to_csv(filepath, index=False)
