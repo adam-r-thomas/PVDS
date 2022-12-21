@@ -163,11 +163,11 @@ def grid_gpu(Px, Py, Vx, Vy, model_resolution, epsilon, dec):
 @cuda.jit('''void(float64[:], float64[:], int8[:], float64,
 float64, float64, float64, float64,
 float64[:,:], float64[:,:], float64[:,:],
-boolean, boolean, boolean, float64, float64, int8)''')
-def model_gpu(Px, Py, Pi, angle,
+boolean, boolean, boolean, float64, float64, int8, float64, int8)''')
+def model_gpu(Px, Py, Pi, α,
               Rx, Ry, Rz, rate,
               Vx, Vy, Vi,
-              divet, peak, corner, epsilon, tArea, dec):
+              divet, peak, corner, epsilon, tArea, dec, Xi, rule):
     '''
     WARNING: Core Code Function
 
@@ -227,6 +227,13 @@ def model_gpu(Px, Py, Pi, angle,
     Has 2 zero checks.
         1: area of triangle to determine if a line is straight
         2: intersection tests.
+
+    Growth Directions
+    0 == Linear Rule: β = α
+
+    1 == Cosine Rule: β = α - arcsin((1 - cos(α)) / 2)
+
+    2 == Tangent Rule: tan(α) = 2 * tan(β) | 0 <= α <= 60 deg
     '''
     i = cuda.grid(1)
 
@@ -255,8 +262,8 @@ def model_gpu(Px, Py, Pi, angle,
     elif i < Px.shape[0] - 1 and i > 1:
         # Point is now assumed to be in evaporant
         # Determine from a set of 3 points A:i-1, B:i, C:i+1 if it is straight
-        # value should be zero (smaller than epsilon). Is area of triangle
-        area: 'area of triangle' = (Px[i - 1] * (Py[i] - Py[i + 1])
+        # value should be zero (smaller than epsilon). Is area of triα
+        area: 'area of triαngle' = (Px[i - 1] * (Py[i] - Py[i + 1])
                                     + Px[i] * (Py[i + 1] - Py[i - 1])
                                     + Px[i + 1] * (Py[i - 1] - Py[i]))
 
@@ -268,9 +275,18 @@ def model_gpu(Px, Py, Pi, angle,
             d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                 * math.sqrt(Sy ** 2 + Sx ** 2)
             θ = math.acos(max(-1.0, min(1.0, (n / d))))
-            t = math.fabs(math.cos(θ) * rate)
-            Ax = Px[i] + t * math.sin(angle)
-            Ay = Py[i] + t * math.cos(angle)
+            t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+            if rule == 1:
+                β = α - math.asin((1 - math.cos(α)) / 2)
+                Ax = Px[i] + t * math.sin(β)
+                Ay = Py[i] + t * math.cos(β)
+            elif rule == 2:
+                β = math.atan(math.tan(α) / 2)
+                Ax = Px[i] + t * math.sin(β)
+                Ay = Py[i] + t * math.cos(β)
+            else:
+                Ax = Px[i] + t * math.sin(α)
+                Ay = Py[i] + t * math.cos(α)
             Vx[i, 0] = round(Ax, dec)
             Vy[i, 0] = round(Ay, dec)
             Vi[i, 0] = 0
@@ -299,11 +315,25 @@ def model_gpu(Px, Py, Pi, angle,
                 d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                     * math.sqrt(Sy ** 2 + Sx ** 2)
                 θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                t1 = math.fabs(math.cos(θ) * rate)
-                p0_x = Px[i - 1] + t1 * math.sin(angle)
-                p0_y = Py[i - 1] + t1 * math.cos(angle)
-                p1_x = Px[i] + t1 * math.sin(angle)
-                p1_y = Py[i] + t1 * math.cos(angle)
+                t1 = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+
+                if rule == 1:
+                    β = α - math.asin((1 - math.cos(α)) / 2)
+                    p0_x = Px[i - 1] + t1 * math.sin(β)
+                    p0_y = Py[i - 1] + t1 * math.cos(β)
+                    p1_x = Px[i] + t1 * math.sin(β)
+                    p1_y = Py[i] + t1 * math.cos(β)
+                elif rule == 2:
+                    β = math.atan(math.tan(α) / 2)
+                    p0_x = Px[i - 1] + t1 * math.sin(β)
+                    p0_y = Py[i - 1] + t1 * math.cos(β)
+                    p1_x = Px[i] + t1 * math.sin(β)
+                    p1_y = Py[i] + t1 * math.cos(β)
+                else:
+                    p0_x = Px[i - 1] + t1 * math.sin(α)
+                    p0_y = Py[i - 1] + t1 * math.cos(α)
+                    p1_x = Px[i] + t1 * math.sin(α)
+                    p1_y = Py[i] + t1 * math.cos(α)
 
                 # B : Right point of vertice
                 Sx = Px[i + 1] - Px[i]
@@ -312,11 +342,25 @@ def model_gpu(Px, Py, Pi, angle,
                 d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                     * math.sqrt(Sy ** 2 + Sx ** 2)
                 θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                t2 = math.fabs(math.cos(θ) * rate)
-                p3_x = Px[i] + t2 * math.sin(angle)
-                p3_y = Py[i] + t2 * math.cos(angle)
-                p2_x = Px[i + 1] + t2 * math.sin(angle)
-                p2_y = Py[i + 1] + t2 * math.cos(angle)
+                t2 = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+
+                if rule == 1:
+                    β = α - math.asin((1 - math.cos(α)) / 2)
+                    p3_x = Px[i] + t2 * math.sin(β)
+                    p3_y = Py[i] + t2 * math.cos(β)
+                    p2_x = Px[i + 1] + t2 * math.sin(β)
+                    p2_y = Py[i + 1] + t2 * math.cos(β)
+                elif rule == 2:
+                    β = math.atan(math.tan(α) / 2)
+                    p3_x = Px[i] + t2 * math.sin(β)
+                    p3_y = Py[i] + t2 * math.cos(β)
+                    p2_x = Px[i + 1] + t2 * math.sin(β)
+                    p2_y = Py[i + 1] + t2 * math.cos(β)
+                else:
+                    p3_x = Px[i] + t2 * math.sin(α)
+                    p3_y = Py[i] + t2 * math.cos(α)
+                    p2_x = Px[i + 1] + t2 * math.sin(α)
+                    p2_y = Py[i + 1] + t2 * math.cos(α)
                 # Start intersection calculation
                 Rx = (p1_x - p0_x)
                 Ry = (p1_y - p0_y)
@@ -361,9 +405,18 @@ def model_gpu(Px, Py, Pi, angle,
                         d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                             * math.sqrt(Sy ** 2 + Sx ** 2)
                         θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                        t = math.fabs(math.cos(θ) * rate)
-                        Ax = Px[i] + t * math.sin(angle)
-                        Ay = Py[i] + t * math.cos(angle)
+                        t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+                        if rule == 1:
+                            β = α - math.asin((1 - math.cos(α)) / 2)
+                            Ax = Px[i] + t * math.sin(β)
+                            Ay = Py[i] + t * math.cos(β)
+                        elif rule == 2:
+                            β = math.atan(math.tan(α) / 2)
+                            Ax = Px[i] + t * math.sin(β)
+                            Ay = Py[i] + t * math.cos(β)
+                        else:
+                            Ax = Px[i] + t * math.sin(α)
+                            Ay = Py[i] + t * math.cos(α)
                         Vx[i, 0] = round(Ax, dec)
                         Vy[i, 0] = round(Ay, dec)
                         Vi[i, 0] = 0
@@ -377,9 +430,18 @@ def model_gpu(Px, Py, Pi, angle,
                     d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                         * math.sqrt(Sy ** 2 + Sx ** 2)
                     θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                    t = math.fabs(math.cos(θ) * rate)
-                    Ax = Px[i] + t * math.sin(angle)
-                    Ay = Py[i] + t * math.cos(angle)
+                    t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+                    if rule == 1:
+                        β = α - math.asin((1 - math.cos(α)) / 2)
+                        Ax = Px[i] + t * math.sin(β)
+                        Ay = Py[i] + t * math.cos(β)
+                    elif rule == 2:
+                        β = math.atan(math.tan(α) / 2)
+                        Ax = Px[i] + t * math.sin(β)
+                        Ay = Py[i] + t * math.cos(β)
+                    else:
+                        Ax = Px[i] + t * math.sin(α)
+                        Ay = Py[i] + t * math.cos(α)
                     Vx[i, 0] = round(Ax, dec)
                     Vy[i, 0] = round(Ay, dec)
                     Vi[i, 0] = 0
@@ -392,9 +454,18 @@ def model_gpu(Px, Py, Pi, angle,
                 d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                     * math.sqrt(Sy ** 2 + Sx ** 2)
                 θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                t = math.fabs(math.cos(θ) * rate)
-                Ax = Px[i] + t * math.sin(angle)
-                Ay = Py[i] + t * math.cos(angle)
+                t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+                if rule == 1:
+                    β = α - math.asin((1 - math.cos(α)) / 2)
+                    Ax = Px[i] + t * math.sin(β)
+                    Ay = Py[i] + t * math.cos(β)
+                elif rule == 2:
+                    β = math.atan(math.tan(α) / 2)
+                    Ax = Px[i] + t * math.sin(β)
+                    Ay = Py[i] + t * math.cos(β)
+                else:
+                    Ax = Px[i] + t * math.sin(α)
+                    Ay = Py[i] + t * math.cos(α)
                 if corner:
                     Vx[i, 0] = Px[i]
                     Vy[i, 0] = Py[i]
@@ -415,9 +486,18 @@ def model_gpu(Px, Py, Pi, angle,
                 d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                     * math.sqrt(Sy ** 2 + Sx ** 2)
                 θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                t = math.fabs(math.cos(θ) * rate)
-                Ax = Px[i] + t * math.sin(angle)
-                Ay = Py[i] + t * math.cos(angle)
+                t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+                if rule == 1:
+                    β = α - math.asin((1 - math.cos(α)) / 2)
+                    Ax = Px[i] + t * math.sin(β)
+                    Ay = Py[i] + t * math.cos(β)
+                elif rule == 2:
+                    β = math.atan(math.tan(α) / 2)
+                    Ax = Px[i] + t * math.sin(β)
+                    Ay = Py[i] + t * math.cos(β)
+                else:
+                    Ax = Px[i] + t * math.sin(α)
+                    Ay = Py[i] + t * math.cos(α)
                 if corner:
                     Vx[i, 0] = round(Ax, dec)
                     Vy[i, 0] = round(Ay, dec)
