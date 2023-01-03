@@ -19,13 +19,25 @@ from itertools import cycle
 
 from evapsim.physics import (grid_gpu, intersection_gpu,
                              merge_gpu, model_gpu)
+
+from evapsim.physics import (intersection_cpu, grid, merge, model)
+
 from evapsim.dialogs import SimulatorWindow
 
 import logging
 log = logging.getLogger("evapsim")
 
-assert cuda.detect()
-device = cuda.get_current_device()
+try:
+    assert cuda.detect()
+    device = cuda.get_current_device()
+    tpb = device.WARP_SIZE
+    tpb_2d = (tpb // 2, tpb // 2)
+
+except AssertionError:
+    log.info("No GPU found with CUDA capabilities. Switching to CPU mode.")
+    device = None
+    tpb = 0
+    tpb_2d = (0, 0)
 
 
 class Simulator(object):
@@ -95,10 +107,7 @@ class Simulator(object):
         '''
         Build initial parameters of the evaporation simulator
         '''
-        # Setup CUDA device
-        self.device = device
-        self.tpb = device.WARP_SIZE
-        self.tpb_2d = (self.tpb // 2, self.tpb // 2)
+        # corrects for evaporation rate if not per second
         self.tickrate = 1.0
 
         # Setup Graphs
@@ -702,11 +711,11 @@ class Simulator(object):
         output_y = np.full(shape=(xdim, ydim),
                            fill_value=math.nan, dtype=np.float64)
 
-        bpg_x = (output_x.shape[0] + self.tpb_2d[0]) // self.tpb_2d[0]
-        bpg_y = (output_x.shape[1] + self.tpb_2d[1]) // self.tpb_2d[1]
+        bpg_x = (output_x.shape[0] + tpb_2d[0]) // tpb_2d[0]
+        bpg_y = (output_x.shape[1] + tpb_2d[1]) // tpb_2d[1]
         bpg_2d = (bpg_x, bpg_y)
 
-        grid_gpu[bpg_2d, self.tpb_2d](
+        grid_gpu[bpg_2d, tpb_2d](
             input_x, input_y,
             output_x, output_y, self.model_resolution,
             self.epsGrid, self.decGrid)
@@ -731,14 +740,21 @@ class Simulator(object):
         '''
         output_i = np.full(len(input_x), 0, dtype=np.int8)
 
-        bpg_x = (len(input_x) + self.tpb_2d[0]) // self.tpb_2d[0]
-        bpg_y = (len(input_y) + self.tpb_2d[1]) // self.tpb_2d[1]
+        bpg_x = (len(input_x) + tpb_2d[0]) // tpb_2d[0]
+        bpg_y = (len(input_y) + tpb_2d[1]) // tpb_2d[1]
         bpg_2d = (bpg_x, bpg_y)
+        if device:
+            intersection_gpu[bpg_2d, tpb_2d](
+                input_x, input_y, output_i,
+                angle, self.raycast_length,
+                self.epsIntersect, self.decIntersect)
+        else:  # No GPU
+            intersection_cpu(
+                input_x, input_y, output_i,
+                angle, self.raycast_length,
+                self.epsIntersect, self.decIntersect)
+            pass
 
-        intersection_gpu[bpg_2d, self.tpb_2d](
-            input_x, input_y, output_i,
-            angle, self.raycast_length,
-            self.epsIntersect, self.decIntersect)
         return output_i
 
     def model_update_gpu(self, input_x, input_y, input_i, theta, phi):
@@ -770,9 +786,9 @@ class Simulator(object):
         Ry = round(self.raycast_length * math.cos(theta), 10)
         Rz = round(self.raycast_length * math.sin(phi), 10)
 
-        bpg = int(np.ceil(xdim / self.tpb))
+        bpg = int(np.ceil(xdim / tpb))
 
-        model_gpu[bpg, self.tpb](
+        model_gpu[bpg, tpb](
             input_x, input_y, input_i,
             theta, Rx, Ry, Rz, rate,
             output_x, output_y, output_i,
@@ -799,9 +815,9 @@ class Simulator(object):
         output_x = np.full(xdim, fill_value=math.nan, dtype=np.float64)
         output_y = np.full(xdim, fill_value=math.nan, dtype=np.float64)
 
-        bpg = int(np.ceil(xdim / self.tpb))
+        bpg = int(np.ceil(xdim / tpb))
 
-        merge_gpu[bpg, self.tpb](
+        merge_gpu[bpg, tpb](
             input_x, input_y, input_i,
             output_x, output_y, self.gridspace,
             self.epsMerge, self.decMerge)
