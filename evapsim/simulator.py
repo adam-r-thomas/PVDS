@@ -554,53 +554,53 @@ class Simulator(object):
                                  index_col=0)
 
                 self.gui.app.lineEdit_Model_Resolution.setText(
-                    str(df.loc['Model Resolution (A)']))
+                    str(df.loc['Model Resolution (A)'][0]))
                 self.gui.app.lineEdit_Evaporation_Rate.setText(
-                    str(df.loc['Evaporation Rate (A/sec)']))
+                    str(df.loc['Evaporation Rate (A/sec)'][0]))
                 self.gui.app.lineEdit_Evaporation_Time.setText(
-                    str(df.loc['Evaporation Time (sec)']))
+                    str(df.loc['Evaporation Time (sec)'][0]))
                 self.gui.app.lineEdit_Grid_Space.setText(
-                    str(df.loc['Grid space (A)']))
+                    str(df.loc['Grid space (A)'][0]))
                 self.gui.app.lineEdit_Raycast_Length.setText(
-                    str(df.loc['Raycast Length (A)']))
+                    str(df.loc['Raycast Length (A)'][0]))
                 self.gui.app.lineEdit_Model_Limit.setText(
-                    str(df.loc['Model Limit (Pts)']))
+                    str(df.loc['Model Limit (Pts)'][0]))
 
                 self.gui.app.checkBox_divet.setChecked(
-                    df.loc['Average out divets'])
+                    df.loc['Average out divets'][0])
                 self.gui.app.checkBox_peaks.setChecked(
-                    df.loc['Average out peaks'])
+                    df.loc['Average out peaks'][0])
                 self.gui.app.checkBox_corners.setChecked(
-                    df.loc['Preserve corners'])
+                    df.loc['Preserve corners'][0])
                 self.gui.app.checkBox_grid.setChecked(
-                    df.loc['Enforce Grid Space'])
+                    df.loc['Enforce Grid Space'][0])
                 self.gui.app.checkBox_modelRes.setChecked(
-                    df.loc['Enforce Model Limit'])
+                    df.loc['Enforce Model Limit'][0])
 
                 self.gui.app.lineEdit_epsIntersect.setText(
-                    str(df.loc['GPU 0 Intersection']))
+                    str(df.loc['GPU 0 Intersection'][0]))
                 self.gui.app.lineEdit_epsGrid.setText(
-                    str(df.loc['GPU 0 Grid']))
+                    str(df.loc['GPU 0 Grid'][0]))
                 self.gui.app.lineEdit_epsModel.setText(
-                    str(df.loc['GPU 0 Model']))
+                    str(df.loc['GPU 0 Model'][0]))
                 self.gui.app.lineEdit_epsModeltArea.setText(
-                    str(df.loc['GPU 0 tArea']))
+                    str(df.loc['GPU 0 tArea'][0]))
                 self.gui.app.lineEdit_epsMerge.setText(
-                    str(df.loc['GPU 0 Merge']))
+                    str(df.loc['GPU 0 Merge'][0]))
 
                 self.gui.app.lineEdit_decIntersect.setText(
-                    str(int(df.loc['GPU D Intersection'])))
+                    str(int(df.loc['GPU D Intersection'][0])))
                 self.gui.app.lineEdit_decGrid.setText(
-                    str(int(df.loc['GPU D Grid'])))
+                    str(int(df.loc['GPU D Grid'][0])))
                 self.gui.app.lineEdit_decModel.setText(
-                    str(int(df.loc['GPU D Model'])))
+                    str(int(df.loc['GPU D Model'][0])))
                 self.gui.app.lineEdit_decMerge.setText(
-                    str(int(df.loc['GPU D Merge'])))
+                    str(int(df.loc['GPU D Merge'][0])))
 
                 self.gui.app.lineEdit_growth_rate_Xi.setText(
-                    str(df.loc['Directional Dependence']))
+                    str(df.loc['Directional Dependence'][0]))
 
-                self.growthDirection = int(df.loc['Growth Type'])
+                self.growthDirection = int(df.loc['Growth Type'][0])
                 if self.growthDirection == 1:
                     self.gui.app.radioButton_cosinerule.setChecked(True)
                 elif self.growthDirection == 2:
