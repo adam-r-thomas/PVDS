@@ -7,7 +7,7 @@ import logging
 import sys
 
 from PyQt5 import QtWidgets, QtGui
-import qt_ui
+from evapsim import qt_ui
 from matplotlib.backends.backend_qt5agg import (FigureCanvasQTAgg,
                                                 NavigationToolbar2QT)
 
