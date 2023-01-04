@@ -17,10 +17,10 @@ import pandas as pd
 from pathlib import Path
 from itertools import cycle
 
-from evapsim.physics import (grid_gpu, intersection_gpu,
-                             merge_gpu, model_gpu)
-
-from evapsim.physics import (intersection_cpu, grid, merge, model)
+from evapsim.physics import (intersection_cpu, intersection_gpu,
+                             grid_cpu, grid_gpu,
+                             model_cpu, model_gpu,
+                             merge_cpu, merge_gpu)
 
 from evapsim.dialogs import SimulatorWindow
 
@@ -237,16 +237,15 @@ class Simulator(object):
             log.info("Cycle: %s" % angle)
             log.info("Loop: %s" % self.loop_counter)
 
-            if len(self.model_x) > self.model_limit:
-                if self.boolModelRes:
-                    print("Model size limit hit. Reducing model points.")
-                    log.info("Model size limit hit. Reducing model points.")
-                    self.model_x, self.model_y = self.model_derez(self.model_x,
-                                                                  self.model_y)
+            if len(self.model_x) > self.model_limit and self.boolModelRes:
+                print("Model size limit hit. Reducing model points.")
+                log.info("Model size limit hit. Reducing model points.")
+                self.model_x, self.model_y = self.model_reduce(
+                    self.model_x, self.model_y)
 
             # Run model intersection test
             try:
-                log.info("GPU: Intersection")
+                log.info("Intersection Test")
                 self.intersect_result = self.calc_intersection(self.model_x,
                                                                self.model_y,
                                                                angle)
@@ -261,8 +260,8 @@ class Simulator(object):
 
             # Determine new vertices from the model on the grid | Adds material
             try:
-                log.info("GPU: Model Update")
-                self.vert_x, self.vert_y, self.vert_i = self.model_update_gpu(
+                log.info("Model Update")
+                self.vert_x, self.vert_y, self.vert_i = self.calc_model(
                     self.model_x,
                     self.model_y,
                     self.intersect_result,
@@ -270,16 +269,16 @@ class Simulator(object):
             except:  # noqa: I do not know all failure modes from GPU
                 tb = sys.exc_info()
                 log.exception(tb)
-                log.error("Failure on self.model_update_gpu")
-                print("Error occurred with self.model_update_gpu")
+                log.error("Failure on self.calc_model")
+                print("Error occurred with self.calc_model")
                 self.gui.app.pushButton_Pause.click()
                 return
 
             # Merge vertices that are too close
             try:
                 if self.grid:
-                    log.info("GPU: Model Merge")
-                    self.merge_x, self.merge_y = self.model_merge(
+                    log.info("Merge Vertices")
+                    self.merge_x, self.merge_y = self.calc_merge(
                         self.vert_x,
                         self.vert_y,
                         self.vert_i)
@@ -296,20 +295,21 @@ class Simulator(object):
 
             # Re-grid the model
             try:
-                log.info("GPU: Model Grid")
-                self.model_x, self.model_y = self.model_grid_gpu(self.merge_x,
-                                                                 self.merge_y)
+                log.info("Grid Vertices")
+                self.model_x, self.model_y = self.calc_grid(self.merge_x,
+                                                            self.merge_y)
             except:  # noqa: I do not know all failure modes from GPU
                 tb = sys.exc_info()
                 log.exception(tb)
-                log.error("Failure on self.model_grid_gpu")
-                print("Error occurred with self.model_grid_gpu")
+                log.error("Failure on self.calc_grid")
+                print("Error occurred with self.calc_grid")
                 self.gui.app.pushButton_Pause.click()
                 return
 
             # Draw results of intersection test
             self.line_static.set_data(self.model_ini[0], self.model_ini[1])
-            self.line_ani.set_data(self.vert_x, self.vert_y)
+            # self.line_ani.set_data(self.vert_x, self.vert_y)
+            self.line_ani.set_data(self.model_x, self.model_y)
 
             # Draw the current ray cast direction (green line)
             self.line_angle.set_data(
@@ -464,7 +464,7 @@ class Simulator(object):
 
                 self.line_static.set_data(self.model_ini[0], self.model_ini[1])
 
-                self.model_x, self.model_y = self.model_grid_gpu(
+                self.model_x, self.model_y = self.calc_grid(
                     self.model_ini[0],
                     self.model_ini[1])
 
@@ -685,15 +685,8 @@ class Simulator(object):
             df.to_csv(filepath, index=False)
             log.info("Save complete - file saved to: %s" % filepath)
 
-    def model_grid_gpu(self, input_x, input_y):
-        """
-        WARNING: Core code function
-
-        :array input_x: np.array of type float64
-        :array input_y: np.array of type float64
-
-        :array output_x: np.array of type float64
-        :array output_y: np.array of type float64
+    def calc_grid(self, input_x, input_y):
+        """See block comment in physics.grid for details.
 
         TODO: ydim is static. find efficient method for dynamic grid allocation
         On first pass (model load) iterate through model, find the max
@@ -701,7 +694,6 @@ class Simulator(object):
         from that define the ydim. After that, find efficient way to asses
         this same distance and adjust ydim accordingly.
 
-        See block comment in grid_gpu for details.
         """
         xdim = len(input_x)
         ydim = 1000
@@ -711,14 +703,19 @@ class Simulator(object):
         output_y = np.full(shape=(xdim, ydim),
                            fill_value=math.nan, dtype=np.float64)
 
-        bpg_x = (output_x.shape[0] + tpb_2d[0]) // tpb_2d[0]
-        bpg_y = (output_x.shape[1] + tpb_2d[1]) // tpb_2d[1]
-        bpg_2d = (bpg_x, bpg_y)
-
-        grid_gpu[bpg_2d, tpb_2d](
-            input_x, input_y,
-            output_x, output_y, self.model_resolution,
-            self.epsGrid, self.decGrid)
+        if device:
+            bpg_x = (output_x.shape[0] + tpb_2d[0]) // tpb_2d[0]
+            bpg_y = (output_x.shape[1] + tpb_2d[1]) // tpb_2d[1]
+            bpg_2d = (bpg_x, bpg_y)
+            grid_gpu[bpg_2d, tpb_2d](
+                input_x, input_y,
+                output_x, output_y, self.model_resolution,
+                self.epsGrid, self.decGrid)
+        else:  # No GPU
+            grid_cpu(
+                input_x, input_y,
+                output_x, output_y, self.model_resolution,
+                self.epsGrid, self.decGrid)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
@@ -729,21 +726,14 @@ class Simulator(object):
         return output_x, output_y
 
     def calc_intersection(self, input_x, input_y, angle):
-        '''
-        WARNING: Core Code Function
-
-        :array input_x: np.array of type float64
-        :array input_y: np.array of type float64
-        :array output_i: np.array of type int8. Is the intersection results
-
-        See intersection_gpu method for block comment details.
+        '''See physics.intersection method for block comment details.
         '''
         output_i = np.full(len(input_x), 0, dtype=np.int8)
 
-        bpg_x = (len(input_x) + tpb_2d[0]) // tpb_2d[0]
-        bpg_y = (len(input_y) + tpb_2d[1]) // tpb_2d[1]
-        bpg_2d = (bpg_x, bpg_y)
         if device:
+            bpg_x = (len(input_x) + tpb_2d[0]) // tpb_2d[0]
+            bpg_y = (len(input_y) + tpb_2d[1]) // tpb_2d[1]
+            bpg_2d = (bpg_x, bpg_y)
             intersection_gpu[bpg_2d, tpb_2d](
                 input_x, input_y, output_i,
                 angle, self.raycast_length,
@@ -753,20 +743,11 @@ class Simulator(object):
                 input_x, input_y, output_i,
                 angle, self.raycast_length,
                 self.epsIntersect, self.decIntersect)
-            pass
 
         return output_i
 
-    def model_update_gpu(self, input_x, input_y, input_i, theta, phi):
-        """
-        Take intersection data and model, add material to model according to
-        the evaporation rate
-
-        :array input_x: np.array of type float64
-        :array input_y: np.array of type float64
-        :array output_i: np.array of type int8. Is the intersection results
-
-        See block comment in the model_gpu method for details.
+    def calc_model(self, input_x, input_y, input_i, theta, phi):
+        """See block comment in the phyics.model method for details.
 
         Using math.nan to fill in 'empty' values of the output arrays. Valid
         results replace the nan values. Leftover nan's are stripped.
@@ -786,15 +767,23 @@ class Simulator(object):
         Ry = round(self.raycast_length * math.cos(theta), 10)
         Rz = round(self.raycast_length * math.sin(phi), 10)
 
-        bpg = int(np.ceil(xdim / tpb))
-
-        model_gpu[bpg, tpb](
-            input_x, input_y, input_i,
-            theta, Rx, Ry, Rz, rate,
-            output_x, output_y, output_i,
-            self.average_divets, self.average_peaks, self.corner,
-            self.epsModel, self.epsModeltArea, self.decModel,
-            self.growthXi, self.growthDirection)
+        if device:
+            bpg = int(np.ceil(xdim / tpb))
+            model_gpu[bpg, tpb](
+                input_x, input_y, input_i,
+                theta, Rx, Ry, Rz, rate,
+                output_x, output_y, output_i,
+                self.average_divets, self.average_peaks, self.corner,
+                self.epsModel, self.epsModeltArea, self.decModel,
+                self.growthXi, self.growthDirection)
+        else:  # No GPU
+            model_cpu(
+                input_x, input_y, input_i,
+                theta, Rx, Ry, Rz, rate,
+                output_x, output_y, output_i,
+                self.average_divets, self.average_peaks, self.corner,
+                self.epsModel, self.epsModeltArea, self.decModel,
+                self.growthXi, self.growthDirection)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)
@@ -806,21 +795,26 @@ class Simulator(object):
 
         return output_x, output_y, output_i
 
-    def model_merge(self, input_x, input_y, input_i):
+    def calc_merge(self, input_x, input_y, input_i):
         """
-        See block comment in method merge_gpu for details.
+        See block comment in method physics.merge for details.
         """
         xdim = input_x.shape[0]
 
         output_x = np.full(xdim, fill_value=math.nan, dtype=np.float64)
         output_y = np.full(xdim, fill_value=math.nan, dtype=np.float64)
 
-        bpg = int(np.ceil(xdim / tpb))
-
-        merge_gpu[bpg, tpb](
-            input_x, input_y, input_i,
-            output_x, output_y, self.gridspace,
-            self.epsMerge, self.decMerge)
+        if device:
+            bpg = int(np.ceil(xdim / tpb))
+            merge_gpu[bpg, tpb](
+                input_x, input_y, input_i,
+                output_x, output_y, self.gridspace,
+                self.epsMerge, self.decMerge)
+        else:
+            merge_cpu(
+                input_x, input_y, input_i,
+                output_x, output_y, self.gridspace,
+                self.epsMerge, self.decMerge)
 
         output_x = output_x[~np.isnan(output_x)]
         output_y = output_y[~np.isnan(output_y)]
@@ -828,7 +822,7 @@ class Simulator(object):
         return output_x, output_y
         # return input_x, input_y
 
-    def model_derez(self, input_x, input_y):
+    def model_reduce(self, input_x, input_y):
         """Takes current model x,y data and selects points at a minimum of
         model resolution distance away from each other. This should slim down
         the weight of the model in terms of calculations. Particularly for
