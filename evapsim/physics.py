@@ -322,7 +322,8 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
             θ = math.acos(max(-1.0, min(1.0, (n / d))))
             t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
             if rule == 1:
-                β = α - math.asin((1 - math.cos(α)) / 2)
+                β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
+                β = math.copysign(β, α)
                 Ax = Px[i] + t * math.sin(β)
                 Ay = Py[i] + t * math.cos(β)
             elif rule == 2:
@@ -363,7 +364,8 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                 t1 = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
 
                 if rule == 1:
-                    β = α - math.asin((1 - math.cos(α)) / 2)
+                    β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
+                    β = math.copysign(β, α)
                     p0_x = Px[i - 1] + t1 * math.sin(β)
                     p0_y = Py[i - 1] + t1 * math.cos(β)
                     p1_x = Px[i] + t1 * math.sin(β)
@@ -390,7 +392,8 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                 t2 = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
 
                 if rule == 1:
-                    β = α - math.asin((1 - math.cos(α)) / 2)
+                    β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
+                    β = math.copysign(β, α)
                     p3_x = Px[i] + t2 * math.sin(β)
                     p3_y = Py[i] + t2 * math.cos(β)
                     p2_x = Px[i + 1] + t2 * math.sin(β)
@@ -452,7 +455,8 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                         θ = math.acos(max(-1.0, min(1.0, (n / d))))
                         t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
                         if rule == 1:
-                            β = α - math.asin((1 - math.cos(α)) / 2)
+                            β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
+                            β = math.copysign(β, α)
                             Ax = Px[i] + t * math.sin(β)
                             Ay = Py[i] + t * math.cos(β)
                         elif rule == 2:
@@ -477,7 +481,8 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                     θ = math.acos(max(-1.0, min(1.0, (n / d))))
                     t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
                     if rule == 1:
-                        β = α - math.asin((1 - math.cos(α)) / 2)
+                        β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
+                        β = math.copysign(β, α)
                         Ax = Px[i] + t * math.sin(β)
                         Ay = Py[i] + t * math.cos(β)
                     elif rule == 2:
@@ -501,7 +506,8 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                 θ = math.acos(max(-1.0, min(1.0, (n / d))))
                 t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
                 if rule == 1:
-                    β = α - math.asin((1 - math.cos(α)) / 2)
+                    β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
+                    β = math.copysign(β, α)
                     Ax = Px[i] + t * math.sin(β)
                     Ay = Py[i] + t * math.cos(β)
                 elif rule == 2:
@@ -533,7 +539,8 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                 θ = math.acos(max(-1.0, min(1.0, (n / d))))
                 t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
                 if rule == 1:
-                    β = α - math.asin((1 - math.cos(α)) / 2)
+                    β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
+                    β = math.copysign(β, α)
                     Ax = Px[i] + t * math.sin(β)
                     Ay = Py[i] + t * math.cos(β)
                 elif rule == 2:
