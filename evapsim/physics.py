@@ -1,43 +1,50 @@
+'''Future additions following this paper:
+From: \cite{Hawkeye2007} Hawkeye, M. M., &#38; Brett, M.
+J. (2007). Glancing angle deposition: Fabrication, properties, and applications
+of micro- and nanostructured thin films. <i>Journal of Vacuum Science &#38;
+Technology A: Vacuum, Surfaces, and Films</i>, <i>25</i>(5), 1317.
+https://doi.org/10.1116/1.2764082</div>
 
+More deposition methods to be added:
+
+A 2 linear function approach:
+    β = C_1 * α for 0 <= α <= 55deg
+    β = α - C_2 for α >= 75 deg
+
+Continuum Model:
+    tan(β) = (2 / 3) * (tan(α) / (1 + ⌽ * tan(α) * sin(α)))
+    ⌽ == dependent on diffusivity and deposition rate
+
+Substrate Swing: 'modifies α, usable with cosine, tan, continuum models
+    tan(α') = (2 * tan(α) * sin(⌽/2)) / ⌽
+    ⌽ == swing angle
+'''
 import math
-from numba import cuda
+from numba import cuda, njit, prange, jit
 
 import logging
 log = logging.getLogger("evapsim")
 
 
-@cuda.jit('''void(float64[:], float64[:], int8[:], float64, float64,
-float64, int8)''')
-def intersection_gpu(Px, Py, Vi, angle, cast,
-                     epsilon, dec):
-    """
-    Core calculation code : This is sent to the Nvidia GPU
-    See:
-    https://www.codeproject.com/Tips/862988/Find-the-Intersection-Point-of-Two-Line-Segments
-    https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/565282#565282
-    for a detailed explanation of the method I followed for implementing this
-    into the GPU.
-
+@jit
+def intersection(Px, Py, Vi, angle, cast, epsilon, dec, i, j):
+    """Intersection test between lines generated from model P
     :array Px: numpy array of the x data points of the model
     :array Py: numpy array of the y data points of the model
-    :array Vi: empty numpy array of same size of Px or Py. This holds the
+    :array Vi: empty numpy array of same size of Px, Py. This holds the
     intersection test results. 0 is no intersection, 1 is intersection
 
-    :float raycast_sin_angle: rounded math.sin(angle) of deposition angle
-    :float raycast_cos_angle: rounded math.cos(angle) of deposition angle
-    raycast_sin = round(
-            self.raycast_length * math.sin(angle), 10)
-        raycast_cos = round(
-            self.raycast_length * math.cos(angle), 10)
-    """  # noqa
+    :float angle: in plane evaporation direction
+    :float cast: length of ray cast
+    :float epsilon: computer zero
+    :int dec: rounding accuracy
 
-    i, j = cuda.grid(2)
-
+    i, j are thread identities either assigned in the GPU or CPU
+    """
     if i < Px.shape[0] and j < Py.shape[0] - 1:
         if i == j or i == j + 1:
-            # Line intersecting itself
-            pass
-
+                # Line intersecting itself
+                pass
         else:
             Rx = round(math.sin(angle) * cast, dec)
             Ry = round(math.cos(angle) * cast, dec)
@@ -82,10 +89,28 @@ def intersection_gpu(Px, Py, Vi, angle, cast,
                     pass
 
 
-@cuda.jit('''void(float64[:], float64[:], float64[:,:], float64[:,:], float64,
+@cuda.jit('''void(float64[:], float64[:], int8[:], float64, float64,
 float64, int8)''')
-def grid_gpu(Px, Py, Vx, Vy, model_resolution, epsilon, dec):
-    '''
+def intersection_gpu(Px, Py, Vi, angle, cast, epsilon, dec):
+    """Sends intersection method to GPU using thread identities given by cuda
+    """
+    i, j = cuda.grid(2)
+    intersection(Px, Py, Vi, angle, cast, epsilon, dec, i, j)
+
+
+@njit(parallel=True, nopython=True)
+def intersection_cpu(Px, Py, Vi, angle, cast, epsilon, dec):
+    """Sends intersection method to CPU using parallel execution of loops
+    """
+    n = Px.shape[0]
+    for i in prange(n):
+        for j in prange(n):
+            intersection(Px, Py, Vi, angle, cast, epsilon, dec, i, j)
+
+
+@jit(target='parallel', nopython=True)
+def grid(Px, Py, Vx, Vy, model_resolution, epsilon, dec, i, j):
+    """
     TODO: Better implementation of a ragged list from numpy needed
     Currently the array is a defined size in y (mirrored of x). If it exceeds
     the x dimension this method will fail.
@@ -102,9 +127,16 @@ def grid_gpu(Px, Py, Vx, Vy, model_resolution, epsilon, dec):
     that a line is not drawn backwards. In other words: If I wanted to draw
     a shape without lifting my pencil, what would be the order of points
     along the grid in order to achieve this.
-    '''
-    i, j = cuda.grid(2)
 
+    :array Px: numpy array of the x data points of the model
+    :array Py: numpy array of the y data points of the model
+    :array Vx: numpy array of nan to be filled in by valid model points
+    :array Vy: numpy array of nan to be filled in by valid model points
+
+    :float model_resolution: spacing of ray cast points on a model
+    :float epsilon: computer zero
+    :int dec: rounding accuracy
+    """
     if i == Px.shape[0] - 1 and j == 0:
         # Close the shape
         Vx[i, j] = Px[i]
@@ -160,17 +192,29 @@ def grid_gpu(Px, Py, Vx, Vy, model_resolution, epsilon, dec):
                         Vy[i, j] = round(Py[i] - (y * j), dec)
 
 
-@cuda.jit('''void(float64[:], float64[:], int8[:], float64,
-float64, float64, float64, float64,
-float64[:,:], float64[:,:], float64[:,:],
-boolean, boolean, boolean, float64, float64, int8, float64, int8)''')
-def model_gpu(Px, Py, Pi, α,
-              Rx, Ry, Rz, rate,
-              Vx, Vy, Vi,
-              divet, peak, corner, epsilon, tArea, dec, Xi, rule):
+@cuda.jit('''void(float64[:], float64[:], float64[:,:], float64[:,:], float64,
+float64, int8)''')
+def grid_gpu(Px, Py, Vx, Vy, model_resolution, epsilon, dec):
+    '''Sends grid method to GPU using cuda for thread identities
     '''
-    WARNING: Core Code Function
+    i, j = cuda.grid(2)
+    grid(Px, Py, Vx, Vy, model_resolution, epsilon, dec, i, j)
 
+
+@njit(parallel=True, nopython=True)
+def grid_cpu(Px, Py, Vx, Vy, model_resolution, epsilon, dec):
+    '''Sends grid method to CPU using parallel loops for thread identities
+    '''
+    n = Px.shape[0]
+    for i in prange(n):
+        for j in prange(n):
+            grid(Px, Py, Vx, Vy, model_resolution, epsilon, dec, i, j)
+
+
+@jit
+def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
+          divet, peak, corner, epsilon, tArea, dec, Xi, rule, i):
+    '''
     This is where material is added to the model. I have yet to perfect a
     solution to only adding needed points without accidently dropping some. So
     for now, I am keeping all points added to the model. It is not that
@@ -180,39 +224,14 @@ def model_gpu(Px, Py, Pi, α,
     when adding new points to the model.
 
     Take intersection data and model, add material to model according to
-    the evaporation rate
-
-    There are a set of assumptions made on how the evaporation is adding
-    material to the model. From these assumptions we can extrapolate how
-    vertices near or in shaded region can be handled to save on
-    computational time.
-
-        1: A point that has equal evaporation to either side is considered a
-        point with no information. However, should this point also be not
-        'straight' with respect to its nearest neighbors it contains
-        information of the model itself.
-
-        2: Information is contained in a point or set of points that do not
-        have equal evaporation on either side
-
-        3: The evaporation between 2 points that have no information can be
-        omitted
-
-    With this set of rules only points that have varying evaporations
-    contain the information to replot the model with minimal points. The
-    points that are corners of the model that have no evaporation are also
-    preserved.
-
-    These points are the new vertices of the model.
-
-    The points inbetween vertices are no longer needed as the model will
-    regrid these vertices to have an equal resolution.
+    the evaporation rate and given rule set
 
     Old 2D method for acute angle:
     numerator = (Rx * Sx) + (Ry * Sy)
-            denominator = math.sqrt(Rx ** 2 + Ry ** 2) \
-                * math.sqrt(Sx ** 2 + Sy ** 2)
-    For 3D we must consider the normal to the plane and the raycast evap line
+    denominator = math.sqrt(Rx ** 2 + Ry ** 2) \
+        * math.sqrt(Sx ** 2 + Sy ** 2)
+
+    For 3D we must consider the normal to the plane and the ray cast evap line
     Segment S then has a parallel line 1 unit away T such that we have a finite
     plane of width 1. The cross product yields our normal vector N.
     S cross T = N, since T is parallel to S in Z, T = (0, 0, 1)
@@ -234,16 +253,42 @@ def model_gpu(Px, Py, Pi, α,
     1 == Cosine Rule: β = α - arcsin((1 - cos(α)) / 2)
 
     2 == Tangent Rule: tan(α) = 2 * tan(β) | 0 <= α <= 60 deg
-    '''
-    i = cuda.grid(1)
 
+    :array Px: numpy array of the x data points of the model
+    :array Py: numpy array of the y data points of the model
+    :array Pi: numpy array of the intersection data points of the model
+
+    :array Rx: numpy array of the x data points of the ray cast
+    :array Ry: numpy array of the y data points of the ray cast
+    :array Rz: numpy array of the z data points of the ray cast
+
+    :array Vx: numpy array of nan to be filled in by valid model points
+    :array Vy: numpy array of nan to be filled in by valid model points
+    :array Vi: numpy array of the intersection data points of the model
+
+    :float α: angle of in plane evaporation
+    :float rate: evaporation rate
+
+    :float epsilon: computer zero
+    :float tArea: computer zero of determining if a line is straight
+    :int dec: rounding accuracy
+
+    :float Xi: directional dependent growth value. Higher values less
+    dependence the growth has on evaporation angle
+
+    :bool divet: average out peaks that form
+    :bool peak: average out divets that form
+    :bool corner: keep corner points on growth
+
+    :int rule: growth direction rules
+    '''
     if i == 0 or i == Px.shape[0] - 1:
         # Pin start of model | Pin end of model
         Vx[i, 0] = Px[i]
         Vy[i, 0] = Py[i]
         Vi[i, 0] = 1
 
-    elif Pi[i] != 0:
+    elif i < Px.shape[0] - 1 and Pi[i] != 0:
         # Point in shadow
         if Pi[i - 1] == 0 and Pi[i + 1] == 0 and divet:
             # A divet with material landing around it. Likely none physical
@@ -259,11 +304,11 @@ def model_gpu(Px, Py, Pi, α,
             Vy[i, 0] = Py[i]
             Vi[i, 0] = 1
 
-    elif i < Px.shape[0] - 1 and i > 1:
+    elif i < Px.shape[0] - 1:  # and i > 1
         # Point is now assumed to be in evaporant
         # Determine from a set of 3 points A:i-1, B:i, C:i+1 if it is straight
         # value should be zero (smaller than epsilon). Is area of triα
-        area: 'area of triαngle' = (Px[i - 1] * (Py[i] - Py[i + 1])
+        area: 'area of triangle' = (Px[i - 1] * (Py[i] - Py[i + 1])
                                     + Px[i] * (Py[i + 1] - Py[i - 1])
                                     + Px[i + 1] * (Py[i - 1] - Py[i]))
 
@@ -511,11 +556,37 @@ def model_gpu(Px, Py, Pi, α,
                     Vi[i, 0] = 0
 
 
-@cuda.jit('''void(float64[:], float64[:], float64[:],
-float64[:], float64[:], float64, float64, int8)''')
-def merge_gpu(Px, Py, Pi,
-              Vx, Vy, gridspace, epsilon, dec):
-    """
+@cuda.jit('''void(float64[:], float64[:], int8[:], float64,
+float64, float64, float64, float64,
+float64[:,:], float64[:,:], float64[:,:],
+boolean, boolean, boolean, float64, float64, int8, float64, int8)''')
+def model_gpu(Px, Py, Pi, α,
+              Rx, Ry, Rz, rate,
+              Vx, Vy, Vi,
+              divet, peak, corner, epsilon, tArea, dec, Xi, rule):
+    '''Sends model method to GPU using thread identities from cuda
+    '''
+    i = cuda.grid(1)
+    model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
+          divet, peak, corner, epsilon, tArea, dec, Xi, rule, i)
+
+
+@njit(parallel=True, nopython=True)
+def model_cpu(Px, Py, Pi, α,
+              Rx, Ry, Rz, rate,
+              Vx, Vy, Vi,
+              divet, peak, corner, epsilon, tArea, dec, Xi, rule):
+    '''Sends model method to CPU using parallel looping for thread identities
+    '''
+    n = Px.shape[0]
+    for i in prange(n):
+        model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
+              divet, peak, corner, epsilon, tArea, dec, Xi, rule, i)
+
+
+@jit
+def merge(Px, Py, Pi, Vx, Vy, gridspace, epsilon, dec, i):
+    '''
     Merge points together that fall within the defined gridspace. Currently
     implemented as a simple merge function. My fancier versions produced some
     interesting artifacts.
@@ -526,15 +597,13 @@ def merge_gpu(Px, Py, Pi,
 
     This is happening right after new material is added, thus we can lock
     points that didn't get new material to preserve profile at corners.
-    """
-    i = cuda.grid(1)
-
+    '''
     if i == 0 or i == Px.shape[0] - 1:
         # Pin start of model | Pin end of model
         Vx[i] = Px[i]
         Vy[i] = Py[i]
 
-    else:
+    elif i < Px.shape[0] - 1:
         Wx = Px[i + 1] - Px[i - 1]
         Wy = Py[i + 1] - Py[i - 1]
         W = math.sqrt(Wx ** 2 + Wy ** 2)
@@ -556,3 +625,21 @@ def merge_gpu(Px, Py, Pi,
             else:
                 Vx[i] = Ux
                 Vy[i] = Uy
+
+
+@cuda.jit('''void(float64[:], float64[:], float64[:],
+float64[:], float64[:], float64, float64, int8)''')
+def merge_gpu(Px, Py, Pi, Vx, Vy, gridspace, epsilon, dec):
+    """Sends merge method to GPU using thread identities from cuda
+    """
+    i = cuda.grid(1)
+    merge(Px, Py, Pi, Vx, Vy, gridspace, epsilon, dec, i)
+
+
+@njit(parallel=True, nopython=True)
+def merge_cpu(Px, Py, Pi, Vx, Vy, gridspace, epsilon, dec):
+    """Sends merge method to CPU using thread identities from parallel loops
+    """
+    n = Px.shape[0]
+    for i in prange(n):
+        merge(Px, Py, Pi, Vx, Vy, gridspace, epsilon, dec, i)
