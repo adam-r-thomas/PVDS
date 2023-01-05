@@ -14,7 +14,7 @@ $ python
 ```
 This will run the program:
 
-<img src="Examples/Physical_Vapor_Deposition_Simulator.png" alt="evapsim" width="1000"/>
+<img src="Figures/EvapSim_1.png" alt="evapsim" width="1000"/>
 
 The model files is saved as a single .csv file containing the vertices of the cross section and the evaporation sweep used with it. Any sweep or model can be
 loaded from other .csv files as long as the header column names remain the same:
@@ -24,7 +24,7 @@ For the model file:
 Model x (A), Model y (A)
 ```
 
-<img src="Examples/PVDS_Savedata.png" alt="evapsim" width="1000"/>
+<img src="Figures/EvapSim_Save.png" alt="evapsim" width="1000"/>
 and for raycast profile
 
 ```
