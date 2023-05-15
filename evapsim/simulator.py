@@ -432,6 +432,13 @@ class Simulator(object):
             self.growthDirection: 'cosine' = 1
         if self.gui.app.radioButton_tangentrule.isChecked():
             self.growthDirection: 'tangent' = 2
+        if self.gui.app.radioButton_costanrule.isChecked():
+            self.growthDirection: 'costan' = 3
+
+        if self.gui.app.radioButton_growthangle_a.isChecked():
+            self.growthAngle = 0
+        if self.gui.app.radioButton_growthangle_t.isChecked():
+            self.growthAngle = 1
 
         log.info("Parameters loaded from GUI")
 
@@ -605,8 +612,16 @@ class Simulator(object):
                     self.gui.app.radioButton_cosinerule.setChecked(True)
                 elif self.growthDirection == 2:
                     self.gui.app.radioButton_tangentrule.setChecked(True)
+                elif self.growthDirection == 3:
+                    self.gui.app.radioButton_costanrule.setChecked(True)
                 else:
                     self.gui.app.radioButton_linearrule.setChecked(True)
+
+                self.growthAngle = int(df.loc['Growth Angle'][0])
+                if self.growthAngle == 0:
+                    self.gui.app.radioButton_growthangle_a.setChecked(True)
+                if self.growthAngle == 1:
+                    self.gui.app.radioButton_growthangle_t.setChecked(True)
 
                 log.info("Settings file loaded: %s" % filepath)
             except (AssertionError, ValueError, KeyError) as _error:
@@ -656,7 +671,8 @@ class Simulator(object):
                                     'GPU D Model',
                                     'GPU D Merge',
                                     'Directional Dependence',
-                                    'Growth Type']
+                                    'Growth Type',
+                                    'Growth Angle']
 
             df4['Settings Val'] = [self.model_resolution,
                                    self.evap_rate_text,
@@ -679,7 +695,8 @@ class Simulator(object):
                                    self.decModel,
                                    self.decMerge,
                                    self.growthXi,
-                                   self.growthDirection]
+                                   self.growthDirection,
+                                   self.growthAngle]
 
             df = pd.concat([df1, df2, df3, df4], axis=1)
             df.to_csv(filepath, index=False)
@@ -766,7 +783,7 @@ class Simulator(object):
         Rx = round(self.raycast_length * math.sin(theta), 10)
         Ry = round(self.raycast_length * math.cos(theta), 10)
         Rz = round(self.raycast_length * math.sin(phi), 10)
-
+        # print("Self Tests")
         if device:
             bpg = int(np.ceil(xdim / tpb))
             model_gpu[bpg, tpb](
@@ -775,7 +792,7 @@ class Simulator(object):
                 output_x, output_y, output_i,
                 self.average_divets, self.average_peaks, self.corner,
                 self.epsModel, self.epsModeltArea, self.decModel,
-                self.growthXi, self.growthDirection)
+                self.growthXi, self.growthDirection, self.growthAngle)
         else:  # No GPU
             model_cpu(
                 input_x, input_y, input_i,
@@ -783,7 +800,7 @@ class Simulator(object):
                 output_x, output_y, output_i,
                 self.average_divets, self.average_peaks, self.corner,
                 self.epsModel, self.epsModeltArea, self.decModel,
-                self.growthXi, self.growthDirection)
+                self.growthXi, self.growthDirection, self.growthAngle)
 
         output_x = output_x.reshape(1, xdim * ydim)
         output_y = output_y.reshape(1, xdim * ydim)

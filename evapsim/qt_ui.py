@@ -18,7 +18,7 @@ class Ui_MainWindow(object):
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayoutWidget = QtWidgets.QWidget(self.centralwidget)
-        self.gridLayoutWidget.setGeometry(QtCore.QRect(9, 10, 341, 181))
+        self.gridLayoutWidget.setGeometry(QtCore.QRect(9, 10, 341, 182))
         self.gridLayoutWidget.setObjectName("gridLayoutWidget")
         self.gridLayout = QtWidgets.QGridLayout(self.gridLayoutWidget)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
@@ -129,7 +129,7 @@ class Ui_MainWindow(object):
         self.label_Model_Limit_Unit.setObjectName("label_Model_Limit_Unit")
         self.gridLayout.addWidget(self.label_Model_Limit_Unit, 5, 2, 1, 1)
         self.verticalLayoutWidget = QtWidgets.QWidget(self.centralwidget)
-        self.verticalLayoutWidget.setGeometry(QtCore.QRect(10, 200, 149, 128))
+        self.verticalLayoutWidget.setGeometry(QtCore.QRect(10, 200, 149, 144))
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
         self.verticalLayout_Left = QtWidgets.QVBoxLayout(
             self.verticalLayoutWidget)
@@ -167,7 +167,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_Left.addWidget(self.pushButton_Save_Evap_Profile)
         self.verticalLayoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
         self.verticalLayoutWidget_2.setGeometry(
-            QtCore.QRect(240, 200, 110, 95))
+            QtCore.QRect(240, 200, 110, 107))
         self.verticalLayoutWidget_2.setObjectName("verticalLayoutWidget_2")
         self.verticalLayout_Right = QtWidgets.QVBoxLayout(
             self.verticalLayoutWidget_2)
@@ -335,7 +335,8 @@ class Ui_MainWindow(object):
         self.label_GPUtArea.setObjectName("label_GPUtArea")
         self.gridLayout_GPUfunc.addWidget(self.label_GPUtArea, 5, 0, 1, 1)
         self.frame_growth_direction = QtWidgets.QFrame(self.tab)
-        self.frame_growth_direction.setGeometry(QtCore.QRect(10, 330, 641, 61))
+        self.frame_growth_direction.setGeometry(
+            QtCore.QRect(10, 330, 641, 131))
         self.frame_growth_direction.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.frame_growth_direction.setFrameShadow(QtWidgets.QFrame.Raised)
         self.frame_growth_direction.setObjectName("frame_growth_direction")
@@ -346,7 +347,7 @@ class Ui_MainWindow(object):
         self.horizontalLayoutWidget_2 = QtWidgets.QWidget(
             self.frame_growth_direction)
         self.horizontalLayoutWidget_2.setGeometry(
-            QtCore.QRect(10, 30, 621, 27))
+            QtCore.QRect(10, 30, 621, 31))
         self.horizontalLayoutWidget_2.setObjectName("horizontalLayoutWidget_2")
         self.horizontalLayout_growth_direction = QtWidgets.QHBoxLayout(
             self.horizontalLayoutWidget_2)
@@ -370,8 +371,39 @@ class Ui_MainWindow(object):
         self.radioButton_tangentrule.setObjectName("radioButton_tangentrule")
         self.horizontalLayout_growth_direction.addWidget(
             self.radioButton_tangentrule)
+        self.radioButton_costanrule = QtWidgets.QRadioButton(
+            self.horizontalLayoutWidget_2)
+        self.radioButton_costanrule.setObjectName("radioButton_costanrule")
+        self.horizontalLayout_growth_direction.addWidget(
+            self.radioButton_costanrule)
+        self.label_growth_direction_2 = QtWidgets.QLabel(
+            self.frame_growth_direction)
+        self.label_growth_direction_2.setGeometry(
+            QtCore.QRect(10, 70, 141, 16))
+        self.label_growth_direction_2.setObjectName("label_growth_direction_2")
+        self.horizontalLayoutWidget_4 = QtWidgets.QWidget(
+            self.frame_growth_direction)
+        self.horizontalLayoutWidget_4.setGeometry(
+            QtCore.QRect(10, 90, 621, 31))
+        self.horizontalLayoutWidget_4.setObjectName("horizontalLayoutWidget_4")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(
+            self.horizontalLayoutWidget_4)
+        self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        self.radioButton_growthangle_a = QtWidgets.QRadioButton(
+            self.horizontalLayoutWidget_4)
+        self.radioButton_growthangle_a.setChecked(True)
+        self.radioButton_growthangle_a.setObjectName(
+            "radioButton_growthangle_a")
+        self.horizontalLayout_2.addWidget(self.radioButton_growthangle_a)
+        self.radioButton_growthangle_t = QtWidgets.QRadioButton(
+            self.horizontalLayoutWidget_4)
+        self.radioButton_growthangle_t.setChecked(False)
+        self.radioButton_growthangle_t.setObjectName(
+            "radioButton_growthangle_t")
+        self.horizontalLayout_2.addWidget(self.radioButton_growthangle_t)
         self.frame_growth_rate = QtWidgets.QFrame(self.tab)
-        self.frame_growth_rate.setGeometry(QtCore.QRect(10, 400, 301, 61))
+        self.frame_growth_rate.setGeometry(QtCore.QRect(10, 470, 301, 61))
         self.frame_growth_rate.setFrameShape(QtWidgets.QFrame.StyledPanel)
         self.frame_growth_rate.setFrameShadow(QtWidgets.QFrame.Raised)
         self.frame_growth_rate.setObjectName("frame_growth_rate")
@@ -380,7 +412,7 @@ class Ui_MainWindow(object):
         self.label_growth_rate.setObjectName("label_growth_rate")
         self.horizontalLayoutWidget_3 = QtWidgets.QWidget(
             self.frame_growth_rate)
-        self.horizontalLayoutWidget_3.setGeometry(QtCore.QRect(9, 30, 281, 31))
+        self.horizontalLayoutWidget_3.setGeometry(QtCore.QRect(9, 30, 281, 33))
         self.horizontalLayoutWidget_3.setObjectName("horizontalLayoutWidget_3")
         self.horizontalLayout_growth_rate = QtWidgets.QHBoxLayout(
             self.horizontalLayoutWidget_3)
@@ -434,7 +466,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.pushButton_Quit)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1052, 20))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1052, 22))
         self.menubar.setObjectName("menubar")
         self.menuMenu = QtWidgets.QMenu(self.menubar)
         self.menuMenu.setObjectName("menuMenu")
@@ -564,6 +596,14 @@ class Ui_MainWindow(object):
             _translate("MainWindow", "Cosine Rule"))
         self.radioButton_tangentrule.setText(
             _translate("MainWindow", "Tangent Rule"))
+        self.radioButton_costanrule.setText(
+            _translate("MainWindow", "Cos+Tan Rule"))
+        self.label_growth_direction_2.setText(
+            _translate("MainWindow", "Growth Angle"))
+        self.radioButton_growthangle_a.setText(
+            _translate("MainWindow", "β = fn(α)"))
+        self.radioButton_growthangle_t.setText(
+            _translate("MainWindow", "β = fn(θ)"))
         self.label_growth_rate.setText(_translate("MainWindow", "Growth Rate"))
         self.label_direction_depend.setText(
             _translate("MainWindow", "Directional Dependence"))

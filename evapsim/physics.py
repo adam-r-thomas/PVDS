@@ -18,8 +18,22 @@ Continuum Model:
 Substrate Swing: 'modifies α, usable with cosine, tan, continuum models
     tan(α') = (2 * tan(α) * sin(⌽/2)) / ⌽
     ⌽ == swing angle
+
+5-8-2023
+Adjusted the flux of cos(θ) to
+(cos(θ) / 2) + cos(acos(2 * cos(θ) - 1) - θ) / 2)
+from
+Zhou, Q., Li, Z., Ni, J., &#38; Zhang, Z. (2011).
+A simple model to describe the rule of glancing angle deposition.
+ <i>Materials Transactions</i>, <i>52</i>(3), 469–473.
+ https://doi.org/10.2320/matertrans.M2010342</div>
+
+
+Rules 1, 2 used alpha -> moved to theta as growth should be more relative to
+surface normal not flux direction
 '''
 import math
+from math import cos, sin, tan, acos, asin, atan, fabs, exp
 from numba import cuda, njit, prange, jit
 
 import logging
@@ -43,11 +57,11 @@ def intersection(Px, Py, Vi, angle, cast, epsilon, dec, i, j):
     """
     if i < Px.shape[0] and j < Py.shape[0] - 1:
         if i == j or i == j + 1:
-                # Line intersecting itself
-                pass
+            # Line intersecting itself
+            pass
         else:
-            Rx = round(math.sin(angle) * cast, dec)
-            Ry = round(math.cos(angle) * cast, dec)
+            Rx = round(sin(angle) * cast, dec)
+            Ry = round(cos(angle) * cast, dec)
             Sx = round(Px[j + 1] - Px[j], dec)
             Sy = round(Py[j + 1] - Py[j], dec)
 
@@ -58,7 +72,7 @@ def intersection(Px, Py, Vi, angle, cast, epsilon, dec, i, j):
 
             RxS = round((Rx * Sy) - (Ry * Sx), dec)
             QPxR = round((QPx * Ry) - (QPy * Rx), dec)
-            if (math.fabs(RxS) <= epsilon) and (math.fabs(QPxR) <= epsilon):
+            if (fabs(RxS) <= epsilon) and (fabs(QPxR) <= epsilon):
                 # Colinear: Overlapping lines is considered intersecting
                 qpr = round(QPx * Rx + QPy * Ry, dec)
                 pqs = round(PQx * Sx + PQy * Sy, dec)
@@ -71,15 +85,15 @@ def intersection(Px, Py, Vi, angle, cast, epsilon, dec, i, j):
                     # The two lines are colinear but disjoint
                     # Vi[i] = 0
                     pass
-            elif (math.fabs(RxS) <= epsilon) \
-                    and not (math.fabs(QPxR) <= epsilon):
+            elif (fabs(RxS) <= epsilon) \
+                    and not (fabs(QPxR) <= epsilon):
                 # Parallel and Non-Intersecting
                 # Vi[i] = 0
                 pass
             else:
                 t = round((QPx * Sy - QPy * Sx) / RxS, dec)
                 u = round((QPx * Ry - QPy * Rx) / RxS, dec)
-                if not (math.fabs(RxS) <= epsilon)\
+                if not (fabs(RxS) <= epsilon)\
                    and (0.0 <= t and t <= 1.0) and (0.0 <= u and u <= 1.0):
                     # Intersection found = model_grid + t*r
                     Vi[i] = 1
@@ -163,14 +177,14 @@ def grid(Px, Py, Vx, Vy, model_resolution, epsilon, dec, i, j):
             y = ys * y
 
             if j < grid_points:
-                if math.fabs(Wx) <= epsilon:  # line is vertical
+                if fabs(Wx) <= epsilon:  # line is vertical
                     if Wy > 0:  # positive
                         Vx[i, j] = Px[i]
                         Vy[i, j] = round(Py[i] + (y * j), dec)
                     else:  # negative
                         Vx[i, j] = Px[i]
                         Vy[i, j] = round(Py[i] - (y * j), dec)
-                elif math.fabs(Wy) <= epsilon:  # line is horizontal
+                elif fabs(Wy) <= epsilon:  # line is horizontal
                     if Wx > 0:  # positive
                         Vx[i, j] = round(Px[i] + (x * j), dec)
                         Vy[i, j] = Py[i]
@@ -213,7 +227,7 @@ def grid_cpu(Px, Py, Vx, Vy, model_resolution, epsilon, dec):
 
 @jit
 def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
-          divet, peak, corner, epsilon, tArea, dec, Xi, rule, i):
+          divet, peak, corner, epsilon, tArea, dec, Xi, rule, GR, i):
     '''
     This is where material is added to the model. I have yet to perfect a
     solution to only adding needed points without accidently dropping some. So
@@ -253,6 +267,8 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
     1 == Cosine Rule: β = α - arcsin((1 - cos(α)) / 2)
 
     2 == Tangent Rule: tan(α) = 2 * tan(β) | 0 <= α <= 60 deg
+
+    3 == CosTan Rule: Tangent Rule < 65, Cosine >= 65
 
     :array Px: numpy array of the x data points of the model
     :array Py: numpy array of the y data points of the model
@@ -312,27 +328,58 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                                     + Px[i] * (Py[i + 1] - Py[i - 1])
                                     + Px[i + 1] * (Py[i - 1] - Py[i]))
 
-        if math.fabs(area) <= tArea:
+        if fabs(area) <= tArea:
             # Line segment is straight
             Sx = Px[i + 1] - Px[i - 1]
             Sy = Py[i + 1] - Py[i - 1]
-            n = (Rx * Sy) - (Ry * Sx)
-            d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+            # p = [0, 0, 1]
+            # n = [-Sy, Sx, 0]
+            num = (-Sy * Rx) + (Sx * Ry)
+            den = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                 * math.sqrt(Sy ** 2 + Sx ** 2)
-            θ = math.acos(max(-1.0, min(1.0, (n / d))))
-            t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
-            if rule == 1:
-                β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
-                β = math.copysign(β, α)
-                Ax = Px[i] + t * math.sin(β)
-                Ay = Py[i] + t * math.cos(β)
-            elif rule == 2:
-                β = math.atan(math.tan(α) / 2)
-                Ax = Px[i] + t * math.sin(β)
-                Ay = Py[i] + t * math.cos(β)
+            num = round(num, 10)
+            den = round(den, 10)
+            # TODO: Flux Modifier
+            θ = acos(max(-1.0, min(1.0, (num / den))))
+            # Bug beta fails with normal, ray at same angle at 0, 180 deg
+            if GR == 1:
+                φ = θ
             else:
-                Ax = Px[i] + t * math.sin(α)
-                Ay = Py[i] + t * math.cos(α)
+                φ = α
+            β1 = fabs(φ) - asin((1 - cos(φ)) / 2)
+            β1 = math.copysign(β1, φ)
+            β2 = atan(tan(φ) / 2)
+            nx = math.copysign(1, -Sy)
+            ny = math.copysign(1, Sx)
+
+            t = fabs(cos(θ) * rate * exp(Xi))
+            x0 = t * round(sin(α), 5)
+            y0 = t * round(cos(α), 5)
+            x1 = t * fabs(round(sin(β1), 5)) * nx
+            y1 = t * fabs(round(cos(β1), 5)) * ny
+            x2 = t * fabs(round(sin(β2), 5)) * nx
+            y2 = t * fabs(round(cos(β2), 5)) * ny
+
+            if rule == 1:
+                Ax = Px[i] + x1
+                Ay = Py[i] + y1
+            elif rule == 2:
+                Ax = Px[i] + x2
+                Ay = Py[i] + y2
+            elif rule == 3:
+                if fabs(math.degrees(θ)) > 65:
+                    Ax = Px[i] + x1
+                    Ay = Py[i] + y1
+                else:
+                    Ax = Px[i] + x2
+                    Ay = Py[i] + y2
+            else:
+                """Old case
+                Ax = Px[i] + t * sin(α)
+                Ay = Py[i] + t * cos(α)
+                """
+                Ax = Px[i] + x0
+                Ay = Py[i] + y0
             Vx[i, 0] = round(Ax, dec)
             Vy[i, 0] = round(Ay, dec)
             Vi[i, 0] = 0
@@ -357,58 +404,112 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                 # A : Left point of vertice
                 Sx = Px[i] - Px[i - 1]
                 Sy = Py[i] - Py[i - 1]
-                n = (Rx * Sy) - (Ry * Sx)
-                d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                num = (-Sy * Rx) + (Sx * Ry)
+                den = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                     * math.sqrt(Sy ** 2 + Sx ** 2)
-                θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                t1 = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+                num = round(num, 10)
+                den = round(den, 10)
+                # TODO: Flux Modifier
+                θ = acos(max(-1.0, min(1.0, (num / den))))
+                if GR == 1:
+                    φ = θ
+                else:
+                    φ = α
+                β1 = fabs(φ) - asin((1 - cos(φ)) / 2)
+                β1 = math.copysign(β1, φ)
+                β2 = atan(tan(φ) / 2)
+                nx = math.copysign(1, -Sy)
+                ny = math.copysign(1, Sx)
+
+                t1 = fabs(cos(θ) * rate * exp(Xi))
+                x0 = t1 * round(sin(α), 5)
+                y0 = t1 * round(cos(α), 5)
+                x1 = t1 * fabs(round(sin(β1), 5)) * nx
+                y1 = t1 * fabs(round(cos(β1), 5)) * ny
+                x2 = t1 * fabs(round(sin(β2), 5)) * nx
+                y2 = t1 * fabs(round(cos(β2), 5)) * ny
 
                 if rule == 1:
-                    β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
-                    β = math.copysign(β, α)
-                    p0_x = Px[i - 1] + t1 * math.sin(β)
-                    p0_y = Py[i - 1] + t1 * math.cos(β)
-                    p1_x = Px[i] + t1 * math.sin(β)
-                    p1_y = Py[i] + t1 * math.cos(β)
+                    p0_x = Px[i - 1] + x1
+                    p0_y = Py[i - 1] + y1
+                    p1_x = Px[i] + x1
+                    p1_y = Py[i] + y1
                 elif rule == 2:
-                    β = math.atan(math.tan(α) / 2)
-                    p0_x = Px[i - 1] + t1 * math.sin(β)
-                    p0_y = Py[i - 1] + t1 * math.cos(β)
-                    p1_x = Px[i] + t1 * math.sin(β)
-                    p1_y = Py[i] + t1 * math.cos(β)
+                    p0_x = Px[i - 1] + x2
+                    p0_y = Py[i - 1] + y2
+                    p1_x = Px[i] + x2
+                    p1_y = Py[i] + y2
+                elif rule == 3:
+                    if fabs(math.degrees(θ)) > 65:
+                        p0_x = Px[i - 1] + x1
+                        p0_y = Py[i - 1] + y1
+                        p1_x = Px[i] + x1
+                        p1_y = Py[i] + y1
+                    else:
+                        p0_x = Px[i - 1] + x2
+                        p0_y = Py[i - 1] + y2
+                        p1_x = Px[i] + x2
+                        p1_y = Py[i] + y2
                 else:
-                    p0_x = Px[i - 1] + t1 * math.sin(α)
-                    p0_y = Py[i - 1] + t1 * math.cos(α)
-                    p1_x = Px[i] + t1 * math.sin(α)
-                    p1_y = Py[i] + t1 * math.cos(α)
+                    p0_x = Px[i - 1] + x0
+                    p0_y = Py[i - 1] + y0
+                    p1_x = Px[i] + x0
+                    p1_y = Py[i] + y0
 
                 # B : Right point of vertice
                 Sx = Px[i + 1] - Px[i]
                 Sy = Py[i + 1] - Py[i]
-                n = (Rx * Sy) - (Ry * Sx)
-                d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                num = (-Sy * Rx) + (Sx * Ry)
+                den = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                     * math.sqrt(Sy ** 2 + Sx ** 2)
-                θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                t2 = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
+                num = round(num, 10)
+                den = round(den, 10)
+                # TODO: Flux Modifier
+                θ = acos(max(-1.0, min(1.0, (num / den))))
+                if GR == 1:
+                    φ = θ
+                else:
+                    φ = α
+                β1 = fabs(φ) - asin((1 - cos(φ)) / 2)
+                β1 = math.copysign(β1, φ)
+                β2 = atan(tan(φ) / 2)
+                nx = math.copysign(1, -Sy)
+                ny = math.copysign(1, Sx)
+
+                t2 = fabs(cos(θ) * rate * exp(Xi))
+                x0 = t2 * round(sin(α), 5)
+                y0 = t2 * round(cos(α), 5)
+                x1 = t2 * fabs(round(sin(β1), 5)) * nx
+                y1 = t2 * fabs(round(cos(β1), 5)) * ny
+                x2 = t2 * fabs(round(sin(β2), 5)) * nx
+                y2 = t2 * fabs(round(cos(β2), 5)) * ny
 
                 if rule == 1:
-                    β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
-                    β = math.copysign(β, α)
-                    p3_x = Px[i] + t2 * math.sin(β)
-                    p3_y = Py[i] + t2 * math.cos(β)
-                    p2_x = Px[i + 1] + t2 * math.sin(β)
-                    p2_y = Py[i + 1] + t2 * math.cos(β)
+                    p3_x = Px[i] + x1
+                    p3_y = Py[i] + y1
+                    p2_x = Px[i + 1] + x1
+                    p2_y = Py[i + 1] + y1
                 elif rule == 2:
-                    β = math.atan(math.tan(α) / 2)
-                    p3_x = Px[i] + t2 * math.sin(β)
-                    p3_y = Py[i] + t2 * math.cos(β)
-                    p2_x = Px[i + 1] + t2 * math.sin(β)
-                    p2_y = Py[i + 1] + t2 * math.cos(β)
+                    p3_x = Px[i] + x2
+                    p3_y = Py[i] + y2
+                    p2_x = Px[i + 1] + x2
+                    p2_y = Py[i + 1] + y2
+                elif rule == 3:
+                    if fabs(math.degrees(θ)) > 65:
+                        p3_x = Px[i] + x1
+                        p3_y = Py[i] + y1
+                        p2_x = Px[i + 1] + x1
+                        p2_y = Py[i + 1] + y1
+                    else:
+                        p3_x = Px[i] + x2
+                        p3_y = Py[i] + y2
+                        p2_x = Px[i + 1] + x2
+                        p2_y = Py[i + 1] + y2
                 else:
-                    p3_x = Px[i] + t2 * math.sin(α)
-                    p3_y = Py[i] + t2 * math.cos(α)
-                    p2_x = Px[i + 1] + t2 * math.sin(α)
-                    p2_y = Py[i + 1] + t2 * math.cos(α)
+                    p3_x = Px[i] + x0
+                    p3_y = Py[i] + y0
+                    p2_x = Px[i + 1] + x0
+                    p2_y = Py[i + 1] + y0
                 # Start intersection calculation
                 Rx = (p1_x - p0_x)
                 Ry = (p1_y - p0_y)
@@ -419,7 +520,7 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                 QPx = p2_x - p0_x
                 QPy = p2_y - p0_y
 
-                if not math.fabs(RxS) <= epsilon:  # Avoid divide by zeros
+                if not fabs(RxS) <= epsilon:  # Avoid divide by zeros
                     s = (QPx * Ry - QPy * Rx) / RxS
                     t = (QPx * Sy - QPy * Sx) / RxS
                     s = round(s, dec)
@@ -449,23 +550,47 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                         # Then add material w.r.t. the forced line segment
                         Sx = Px[i + 1] - Px[i - 1]
                         Sy = Py[i + 1] - Py[i - 1]
-                        n = (Rx * Sy) - (Ry * Sx)
-                        d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                        num = (-Sy * Rx) + (Sx * Ry)
+                        den = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                             * math.sqrt(Sy ** 2 + Sx ** 2)
-                        θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                        t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
-                        if rule == 1:
-                            β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
-                            β = math.copysign(β, α)
-                            Ax = Px[i] + t * math.sin(β)
-                            Ay = Py[i] + t * math.cos(β)
-                        elif rule == 2:
-                            β = math.atan(math.tan(α) / 2)
-                            Ax = Px[i] + t * math.sin(β)
-                            Ay = Py[i] + t * math.cos(β)
+                        num = round(num, 10)
+                        den = round(den, 10)
+                        # TODO: Flux Modifier
+                        θ = acos(max(-1.0, min(1.0, (num / den))))
+                        if GR == 1:
+                            φ = θ
                         else:
-                            Ax = Px[i] + t * math.sin(α)
-                            Ay = Py[i] + t * math.cos(α)
+                            φ = α
+                        β1 = fabs(φ) - asin((1 - cos(φ)) / 2)
+                        β1 = math.copysign(β1, φ)
+                        β2 = atan(tan(φ) / 2)
+                        nx = math.copysign(1, -Sy)
+                        ny = math.copysign(1, Sx)
+
+                        t = fabs(cos(θ) * rate * exp(Xi))
+                        x0 = t * round(sin(α), 5)
+                        y0 = t * round(cos(α), 5)
+                        x1 = t * fabs(round(sin(β1), 5)) * nx
+                        y1 = t * fabs(round(cos(β1), 5)) * ny
+                        x2 = t * fabs(round(sin(β2), 5)) * nx
+                        y2 = t * fabs(round(cos(β2), 5)) * ny
+
+                        if rule == 1:
+                            Ax = Px[i] + x1
+                            Ay = Py[i] + y1
+                        elif rule == 2:
+                            Ax = Px[i] + x2
+                            Ay = Py[i] + y2
+                        elif rule == 3:
+                            if fabs(math.degrees(θ)) > 65:
+                                Ax = Px[i] + x1
+                                Ay = Py[i] + y1
+                            else:
+                                Ax = Px[i] + x2
+                                Ay = Py[i] + y2
+                        else:
+                            Ax = Px[i] + x0
+                            Ay = Py[i] + y0
                         Vx[i, 0] = round(Ax, dec)
                         Vy[i, 0] = round(Ay, dec)
                         Vi[i, 0] = 0
@@ -475,23 +600,47 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                     # Then add material w.r.t. the forced line segment
                     Sx = Px[i + 1] - Px[i - 1]
                     Sy = Py[i + 1] - Py[i - 1]
-                    n = (Rx * Sy) - (Ry * Sx)
-                    d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                    num = (-Sy * Rx) + (Sx * Ry)
+                    den = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                         * math.sqrt(Sy ** 2 + Sx ** 2)
-                    θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                    t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
-                    if rule == 1:
-                        β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
-                        β = math.copysign(β, α)
-                        Ax = Px[i] + t * math.sin(β)
-                        Ay = Py[i] + t * math.cos(β)
-                    elif rule == 2:
-                        β = math.atan(math.tan(α) / 2)
-                        Ax = Px[i] + t * math.sin(β)
-                        Ay = Py[i] + t * math.cos(β)
+                    num = round(num, 10)
+                    den = round(den, 10)
+                    # TODO: Flux Modifier
+                    θ = acos(max(-1.0, min(1.0, (num / den))))
+                    if GR == 1:
+                        φ = θ
                     else:
-                        Ax = Px[i] + t * math.sin(α)
-                        Ay = Py[i] + t * math.cos(α)
+                        φ = α
+                    β1 = fabs(φ) - asin((1 - cos(φ)) / 2)
+                    β1 = math.copysign(β1, φ)
+                    β2 = atan(tan(φ) / 2)
+                    nx = math.copysign(1, -Sy)
+                    ny = math.copysign(1, Sx)
+
+                    t = fabs(cos(θ) * rate * exp(Xi))
+                    x0 = t * round(sin(α), 5)
+                    y0 = t * round(cos(α), 5)
+                    x1 = t * fabs(round(sin(β1), 5)) * nx
+                    y1 = t * fabs(round(cos(β1), 5)) * ny
+                    x2 = t * fabs(round(sin(β2), 5)) * nx
+                    y2 = t * fabs(round(cos(β2), 5)) * ny
+
+                    if rule == 1:
+                        Ax = Px[i] + x1
+                        Ay = Py[i] + y1
+                    elif rule == 2:
+                        Ax = Px[i] + x2
+                        Ay = Py[i] + y2
+                    elif rule == 3:
+                        if fabs(math.degrees(θ)) > 65:
+                            Ax = Px[i] + x1
+                            Ay = Py[i] + y1
+                        else:
+                            Ax = Px[i] + x2
+                            Ay = Py[i] + y2
+                    else:
+                        Ax = Px[i] + x0
+                        Ay = Py[i] + y0
                     Vx[i, 0] = round(Ax, dec)
                     Vy[i, 0] = round(Ay, dec)
                     Vi[i, 0] = 0
@@ -500,23 +649,47 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                 # Shaded corner evap | Preserve the i point
                 Sx = Px[i + 1] - Px[i]
                 Sy = Py[i + 1] - Py[i]
-                n = (Rx * Sy) - (Ry * Sx)
-                d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                num = (-Sy * Rx) + (Sx * Ry)
+                den = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                     * math.sqrt(Sy ** 2 + Sx ** 2)
-                θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
-                if rule == 1:
-                    β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
-                    β = math.copysign(β, α)
-                    Ax = Px[i] + t * math.sin(β)
-                    Ay = Py[i] + t * math.cos(β)
-                elif rule == 2:
-                    β = math.atan(math.tan(α) / 2)
-                    Ax = Px[i] + t * math.sin(β)
-                    Ay = Py[i] + t * math.cos(β)
+                num = round(num, 10)
+                den = round(den, 10)
+                # TODO: Flux Modifier
+                θ = acos(max(-1.0, min(1.0, (num / den))))
+                if GR == 1:
+                    φ = θ
                 else:
-                    Ax = Px[i] + t * math.sin(α)
-                    Ay = Py[i] + t * math.cos(α)
+                    φ = α
+                β1 = fabs(φ) - asin((1 - cos(φ)) / 2)
+                β1 = math.copysign(β1, φ)
+                β2 = atan(tan(φ) / 2)
+                nx = math.copysign(1, -Sy)
+                ny = math.copysign(1, Sx)
+
+                t = fabs(cos(θ) * rate * exp(Xi))
+                x0 = t * round(sin(α), 5)
+                y0 = t * round(cos(α), 5)
+                x1 = t * fabs(round(sin(β1), 5)) * nx
+                y1 = t * fabs(round(cos(β1), 5)) * ny
+                x2 = t * fabs(round(sin(β2), 5)) * nx
+                y2 = t * fabs(round(cos(β2), 5)) * ny
+
+                if rule == 1:
+                    Ax = Px[i] + x1
+                    Ay = Py[i] + y1
+                elif rule == 2:
+                    Ax = Px[i] + x2
+                    Ay = Py[i] + y2
+                elif rule == 3:
+                    if fabs(math.degrees(θ)) > 65:
+                        Ax = Px[i] + x1
+                        Ay = Py[i] + y1
+                    else:
+                        Ax = Px[i] + x2
+                        Ay = Py[i] + y2
+                else:
+                    Ax = Px[i] + x0
+                    Ay = Py[i] + y0
                 if corner:
                     Vx[i, 0] = Px[i]
                     Vy[i, 0] = Py[i]
@@ -533,23 +706,47 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
                 # Shaded corner evap | Preserve the i point
                 Sx = Px[i] - Px[i - 1]
                 Sy = Py[i] - Py[i - 1]
-                n = (Rx * Sy) - (Ry * Sx)
-                d = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
+                num = (-Sy * Rx) + (Sx * Ry)
+                den = math.sqrt(Rx ** 2 + Ry ** 2 + Rz ** 2) \
                     * math.sqrt(Sy ** 2 + Sx ** 2)
-                θ = math.acos(max(-1.0, min(1.0, (n / d))))
-                t = math.fabs(math.cos(θ) * rate * math.exp(-Xi))
-                if rule == 1:
-                    β = math.fabs(α) - math.asin((1 - math.cos(α)) / 2)
-                    β = math.copysign(β, α)
-                    Ax = Px[i] + t * math.sin(β)
-                    Ay = Py[i] + t * math.cos(β)
-                elif rule == 2:
-                    β = math.atan(math.tan(α) / 2)
-                    Ax = Px[i] + t * math.sin(β)
-                    Ay = Py[i] + t * math.cos(β)
+                num = round(num, 10)
+                den = round(den, 10)
+                # TODO: Flux Modifier
+                θ = acos(max(-1.0, min(1.0, (num / den))))
+                if GR == 1:
+                    φ = θ
                 else:
-                    Ax = Px[i] + t * math.sin(α)
-                    Ay = Py[i] + t * math.cos(α)
+                    φ = α
+                β1 = fabs(φ) - asin((1 - cos(φ)) / 2)
+                β1 = math.copysign(β1, φ)
+                β2 = atan(tan(φ) / 2)
+                nx = math.copysign(1, -Sy)
+                ny = math.copysign(1, Sx)
+
+                t = fabs(cos(θ) * rate * exp(Xi))
+                x0 = t * round(sin(α), 5)
+                y0 = t * round(cos(α), 5)
+                x1 = t * fabs(round(sin(β1), 5)) * nx
+                y1 = t * fabs(round(cos(β1), 5)) * ny
+                x2 = t * fabs(round(sin(β2), 5)) * nx
+                y2 = t * fabs(round(cos(β2), 5)) * ny
+
+                if rule == 1:
+                    Ax = Px[i] + x1
+                    Ay = Py[i] + y1
+                elif rule == 2:
+                    Ax = Px[i] + x2
+                    Ay = Py[i] + y2
+                elif rule == 3:
+                    if fabs(math.degrees(θ)) > 65:
+                        Ax = Px[i] + x1
+                        Ay = Py[i] + y1
+                    else:
+                        Ax = Px[i] + x2
+                        Ay = Py[i] + y2
+                else:
+                    Ax = Px[i] + x0
+                    Ay = Py[i] + y0
                 if corner:
                     Vx[i, 0] = round(Ax, dec)
                     Vy[i, 0] = round(Ay, dec)
@@ -566,29 +763,29 @@ def model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
 @cuda.jit('''void(float64[:], float64[:], int8[:], float64,
 float64, float64, float64, float64,
 float64[:,:], float64[:,:], float64[:,:],
-boolean, boolean, boolean, float64, float64, int8, float64, int8)''')
+boolean, boolean, boolean, float64, float64, int8, float64, int8, int8)''')
 def model_gpu(Px, Py, Pi, α,
               Rx, Ry, Rz, rate,
               Vx, Vy, Vi,
-              divet, peak, corner, epsilon, tArea, dec, Xi, rule):
+              divet, peak, corner, epsilon, tArea, dec, Xi, rule, GR):
     '''Sends model method to GPU using thread identities from cuda
     '''
     i = cuda.grid(1)
     model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
-          divet, peak, corner, epsilon, tArea, dec, Xi, rule, i)
+          divet, peak, corner, epsilon, tArea, dec, Xi, rule, GR, i)
 
 
 @njit(parallel=True, nopython=True)
 def model_cpu(Px, Py, Pi, α,
               Rx, Ry, Rz, rate,
               Vx, Vy, Vi,
-              divet, peak, corner, epsilon, tArea, dec, Xi, rule):
+              divet, peak, corner, epsilon, tArea, dec, Xi, rule, GR):
     '''Sends model method to CPU using parallel looping for thread identities
     '''
     n = Px.shape[0]
     for i in prange(n):
         model(Px, Py, Pi, α, Rx, Ry, Rz, rate, Vx, Vy, Vi,
-              divet, peak, corner, epsilon, tArea, dec, Xi, rule, i)
+              divet, peak, corner, epsilon, tArea, dec, Xi, rule, GR, i)
 
 
 @jit
